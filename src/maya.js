@@ -65,6 +65,11 @@ export function secondsLabel(seconds) {
   return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
+export function isBelowRecommendedMinimum(amount, quote) {
+  if (!quote?.recommended_min_amount_in) return false;
+  return BigInt(ethToMayaAmount(amount)) < BigInt(quote.recommended_min_amount_in);
+}
+
 export async function fetchMayaQuote({ amount, destination, toleranceBps = 300 }) {
   const response = await fetch(quoteUrl({ amount, destination, toleranceBps }));
   const data = await response.json();

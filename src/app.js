@@ -2,6 +2,7 @@ import {
   buildEthTransferTx,
   fetchMayaQuote,
   formatMayaAmount,
+  isBelowRecommendedMinimum,
   isLikelyTransparentZecAddress,
   secondsLabel,
 } from './maya.js';
@@ -67,6 +68,10 @@ async function getQuote() {
     setStatus('Fetching fresh Maya quote…');
     const form = readForm();
     const quote = await fetchMayaQuote(form);
+    if (isBelowRecommendedMinimum(form.amount, quote)) {
+      const minimum = formatMayaAmount(quote.recommended_min_amount_in);
+      throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least ${minimum} ETH-equivalent quote units, currently about ${Number(minimum).toFixed(6)} ETH.`);
+    }
     state.quote = quote;
     state.lastAmount = form.amount;
     renderQuote(quote);
@@ -103,6 +108,10 @@ async function sendSwap() {
     setStatus('Refreshing quote before wallet opens…');
     const form = readForm();
     const quote = await fetchMayaQuote(form);
+    if (isBelowRecommendedMinimum(form.amount, quote)) {
+      const minimum = formatMayaAmount(quote.recommended_min_amount_in);
+      throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least ${minimum} ETH-equivalent quote units, currently about ${Number(minimum).toFixed(6)} ETH.`);
+    }
     state.quote = quote;
     state.lastAmount = form.amount;
     renderQuote(quote);

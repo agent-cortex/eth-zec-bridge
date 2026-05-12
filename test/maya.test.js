@@ -7,6 +7,7 @@ import {
   ethToMayaAmount,
   formatMayaAmount,
   isLikelyTransparentZecAddress,
+  isBelowRecommendedMinimum,
   memoToHexData,
   quoteUrl,
   secondsLabel,
@@ -56,4 +57,11 @@ test('constructs a quote URL with slippage protection', () => {
 test('labels durations', () => {
   assert.equal(secondsLabel(24), '24s');
   assert.equal(secondsLabel(125), '2m 5s');
+});
+
+test('detects amounts below Maya recommended minimum', () => {
+  const quote = { recommended_min_amount_in: '300000' };
+  assert.equal(isBelowRecommendedMinimum('0.001', quote), true);
+  assert.equal(isBelowRecommendedMinimum('0.003', quote), false);
+  assert.equal(isBelowRecommendedMinimum('0.01', quote), false);
 });
