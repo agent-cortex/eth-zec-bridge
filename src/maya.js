@@ -42,13 +42,22 @@ export function isLikelyTransparentZecAddress(address) {
   return /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/.test(String(address || '').trim());
 }
 
+export function isLikelyZecAddress(address) {
+  const value = String(address || '').trim();
+  return (
+    /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/.test(value) ||
+    /^u1[a-z0-9]{40,}$/i.test(value) ||
+    /^zs[a-z0-9]{40,}$/i.test(value)
+  );
+}
+
 export function memoToHexData(memo) {
   return '0x' + Array.from(new TextEncoder().encode(memo), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function quoteUrl({ amount, destination, toleranceBps = 300 }) {
-  if (!isLikelyTransparentZecAddress(destination)) {
-    throw new Error('Maya currently supports transparent Zcash addresses only: t1… or t3…');
+  if (!isLikelyZecAddress(destination)) {
+    throw new Error('Enter a Zcash address: transparent t1/t3, unified u1, or shielded zs. Maya will perform final validation.');
   }
   const url = new URL(MAYA_QUOTE_ENDPOINT);
   url.searchParams.set('from_asset', ETH_ASSET);

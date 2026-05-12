@@ -64,13 +64,13 @@
             </div>
           </div>
           <label for="destination">Zcash recipient</label>
-          <input id="destination" placeholder="t1… or t3… transparent ZEC address" autocomplete="off" />
+          <input id="destination" placeholder="t1/t3 transparent, u1 unified, or zs shielded ZEC address" autocomplete="off" />
           <div class="actions">
             <button id="quote">Get quote</button>
             <button id="send" disabled>Send ETH → ZEC</button>
           </div>
           <div id="status"></div>
-          <div class="warn">Important: Maya currently supports transparent Zcash addresses here, not shielded/unified addresses. The app refreshes the quote immediately before sending because vault addresses expire.</div>
+          <div class="warn">Important: Maya now accepts shielded/unified ZEC destinations on supported routes, but the address is still embedded in the swap memo on Ethereum. For best privacy, use a fresh shielded/unified address and avoid reusing it.</div>
         </div>
 
         <aside class="card" id="quote-card" hidden>
@@ -81,7 +81,7 @@
 
         <aside class="card">
           <h2>How it works</h2>
-          <p class="note">Maya nodes observe your Ethereum transaction to the current vault. The tx data contains the memo: swap to ZEC and pay your transparent Zcash address. If the memo/route is invalid, Maya refunds according to protocol rules.</p>
+          <p class="note">Maya nodes observe your Ethereum transaction to the current vault. The tx data contains the memo: swap to ZEC and pay your Zcash address. If the memo/route is invalid, Maya refunds according to protocol rules.</p>
           <p class="note">This is intentionally 0 Solidity: ethskills says don’t put logic onchain unless it needs to be there. Here the correct move is a safe browser flow over an existing native-swap protocol.</p>
         </aside>
       </section>

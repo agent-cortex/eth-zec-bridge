@@ -7,6 +7,7 @@ import {
   ethToMayaAmount,
   formatMayaAmount,
   isLikelyTransparentZecAddress,
+  isLikelyZecAddress,
   isBelowRecommendedMinimum,
   memoToHexData,
   quoteUrl,
@@ -32,12 +33,19 @@ test('formats Maya 1e8 amount units for humans', () => {
   assert.equal(formatMayaAmount('110211'), '0.00110211');
 });
 
-test('accepts only transparent Zcash-looking addresses in the browser guard', () => {
+test('accepts transparent Zcash-looking addresses in the legacy transparent guard', () => {
   assert.equal(isLikelyTransparentZecAddress('t1VnR43K5VjH7JBBc4xH2KccHLakDQvkEr8'), true);
   assert.equal(isLikelyTransparentZecAddress('t3Vz22vK5z2LcKEdg16Yv4FFneEL1zg9ojd'), true);
   assert.equal(isLikelyTransparentZecAddress('u1abcdef'), false);
   assert.equal(isLikelyTransparentZecAddress('zs1abcdef'), false);
   assert.equal(isLikelyTransparentZecAddress('0x0000000000000000000000000000000000000000'), false);
+});
+
+test('accepts transparent, unified, and Sapling-looking Zcash addresses for Maya validation', () => {
+  assert.equal(isLikelyZecAddress('t1VnR43K5VjH7JBBc4xH2KccHLakDQvkEr8'), true);
+  assert.equal(isLikelyZecAddress('u1fcwchlpy2u0t9hdl8wcku8dmvrhwz6lk0jwj2z56ylxhacpn9jnx5sgftx8kv7s97ay37gclcm495panxkz0pyq5479s7vnr90a03sdppp4mupw6vmesh7sf2ym99f4gjl9utaw4eyup53vn7hthu7shms0ct79876xtjk7r8qg4p582'), true);
+  assert.equal(isLikelyZecAddress('zs1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'), true);
+  assert.equal(isLikelyZecAddress('0x0000000000000000000000000000000000000000'), false);
 });
 
 test('encodes Maya memo as Ethereum tx data hex', () => {

@@ -3,7 +3,7 @@ import {
   fetchMayaQuote,
   formatMayaAmount,
   isBelowRecommendedMinimum,
-  isLikelyTransparentZecAddress,
+  isLikelyZecAddress,
   secondsLabel,
 } from './maya.js';
 
@@ -55,8 +55,8 @@ function readForm() {
   const destination = els.destination.value.trim();
   const toleranceBps = Math.round(Number(els.slippage.value || 3) * 100);
   if (!amount) throw new Error('Enter an ETH amount.');
-  if (!isLikelyTransparentZecAddress(destination)) {
-    throw new Error('Enter a transparent Zcash address. Maya/SwapKit do not support shielded ZEC addresses here yet.');
+  if (!isLikelyZecAddress(destination)) {
+    throw new Error('Enter a Zcash address: transparent t1/t3, unified u1, or shielded zs. Maya will perform final validation.');
   }
   if (toleranceBps < 1 || toleranceBps > 9999) throw new Error('Slippage must be between 0.01% and 99.99%.');
   return { amount, destination, toleranceBps };
