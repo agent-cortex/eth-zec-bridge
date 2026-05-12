@@ -132,4 +132,4 @@ els.connect.addEventListener('click', () => connectWallet().catch((error) => set
 els.quote.addEventListener('click', getQuote);
 els.send.addEventListener('click', sendSwap);
 
-setStatus('Connect wallet, enter a transparent ZEC address, quote, then send. No wrapped tokens. No custodial account.');
+setStatus('Connect wallet, enter a ZEC address, quote, then send. No wrapped tokens. No custodial account.');
