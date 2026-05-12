@@ -7,9 +7,61 @@ import {
   secondsLabel,
 } from './maya.js';
 
-const $ = (id) => document.getElementById(id);
-const state = { account: null, quote: null, lastAmount: null };
+/** @typedef {import('./maya.js').MayaQuote} MayaQuote */
+/** @typedef {import('./maya.js').MayaQuoteRequest} MayaQuoteRequest */
 
+/** @typedef {'info'|'ok'|'error'} StatusTone */
+
+/**
+ * Minimal EIP-1193 request object shapes this app sends to injected wallets.
+ *
+ * @typedef {{ method: 'eth_requestAccounts'|'eth_chainId' }} WalletReadRequest
+ */
+
+/**
+ * @typedef {{ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] }} WalletSwitchChainRequest
+ */
+
+/**
+ * @typedef {{ method: 'eth_sendTransaction', params: [import('./maya.js').EthTransferTx & { from: string }] }} WalletSendTransactionRequest
+ */
+
+/** @typedef {WalletReadRequest|WalletSwitchChainRequest|WalletSendTransactionRequest} WalletRequest */
+
+/**
+ * Minimal injected Ethereum provider surface used by this app.
+ *
+ * @typedef {object} EthereumProvider
+ * @property {(request: WalletRequest) => Promise<string|string[]>} request
+ */
+
+/**
+ * @typedef {object} AppState
+ * @property {string|null} account Connected Ethereum account address.
+ * @property {MayaQuote|null} quote Last fetched Maya quote.
+ */
+
+/**
+ * @typedef {object} UIElements
+ * @property {HTMLButtonElement} connect
+ * @property {HTMLButtonElement} quote
+ * @property {HTMLButtonElement} send
+ * @property {HTMLInputElement} amount
+ * @property {HTMLInputElement} destination
+ * @property {HTMLInputElement} slippage
+ * @property {HTMLElement} status
+ * @property {HTMLElement} quoteCard
+ * @property {HTMLElement} details
+ * @property {HTMLElement} txHash
+ */
+
+/** @param {string} id @returns {HTMLElement} */
+const $ = (id) => document.getElementById(id);
+
+/** @type {AppState} */
+const state = { account: null, quote: null };
+
+/** @type {UIElements} */
 const els = {
   connect: $('connect'),
   quote: $('quote'),
@@ -23,16 +75,32 @@ const els = {
   txHash: $('tx-hash'),
 };
 
+/**
+ * @param {string} message
+ * @param {StatusTone} [tone]
+ */
 function setStatus(message, tone = 'info') {
   els.status.textContent = message;
   els.status.dataset.tone = tone;
 }
 
+/**
+ * @param {unknown} error
+ * @returns {string}
+ */
+function errorMessage(error) {
+  if (error instanceof Error) return error.message;
+  console.error('Non-Error rejection', error);
+  return 'Unexpected error. See browser console for details.';
+}
+
+/** @param {boolean} isBusy */
 function setBusy(isBusy) {
   els.quote.disabled = isBusy;
   els.send.disabled = isBusy || !state.quote;
 }
 
+/** @returns {EthereumProvider} */
 function requireEthereum() {
   if (!window.ethereum) throw new Error('No injected Ethereum wallet found. Open this in MetaMask/Rabby.');
   return window.ethereum;
@@ -50,6 +118,7 @@ async function connectWallet() {
   setStatus('Wallet connected on Ethereum mainnet.');
 }
 
+/** @returns {MayaQuoteRequest} */
 function readForm() {
   const amount = els.amount.value.trim();
   const destination = els.destination.value.trim();
@@ -62,33 +131,47 @@ function readForm() {
   return { amount, destination, toleranceBps };
 }
 
+/**
+ * @param {MayaQuoteRequest} form
+ * @returns {Promise<MayaQuote>}
+ */
+async function fetchValidatedQuote(form) {
+  const quote = await fetchMayaQuote(form);
+  if (isBelowRecommendedMinimum(form.amount, quote)) {
+    const minimum = formatMayaAmount(quote.recommended_min_amount_in);
+    throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least about ${Number(minimum).toFixed(6)} ETH.`);
+  }
+  return quote;
+}
+
+/** @param {MayaQuote} quote */
+function storeQuote(quote) {
+  state.quote = quote;
+  renderQuote(quote);
+}
+
 async function getQuote() {
   try {
     setBusy(true);
     setStatus('Fetching fresh Maya quote…');
     const form = readForm();
-    const quote = await fetchMayaQuote(form);
-    if (isBelowRecommendedMinimum(form.amount, quote)) {
-      const minimum = formatMayaAmount(quote.recommended_min_amount_in);
-      throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least ${minimum} ETH-equivalent quote units, currently about ${Number(minimum).toFixed(6)} ETH.`);
-    }
-    state.quote = quote;
-    state.lastAmount = form.amount;
-    renderQuote(quote);
+    const quote = await fetchValidatedQuote(form);
+    storeQuote(quote);
     setStatus('Quote ready. It expires quickly; send only from this screen.', 'ok');
   } catch (error) {
     state.quote = null;
     els.quoteCard.hidden = true;
-    setStatus(error.message, 'error');
+    setStatus(errorMessage(error), 'error');
   } finally {
     setBusy(false);
   }
 }
 
+/** @param {MayaQuote} quote */
 function renderQuote(quote) {
   const expected = formatMayaAmount(quote.expected_amount_out);
-  const outbound = formatMayaAmount(quote.fees?.outbound || 0);
-  const total = formatMayaAmount(quote.fees?.total || 0);
+  const outbound = formatMayaAmount(quote.fees?.outbound ?? 0);
+  const total = formatMayaAmount(quote.fees?.total ?? 0);
   els.details.innerHTML = `
     <div><span>Expected ZEC</span><b>${expected} ZEC</b></div>
     <div><span>Total fees</span><b>${total} ZEC</b></div>
@@ -107,28 +190,22 @@ async function sendSwap() {
     setBusy(true);
     setStatus('Refreshing quote before wallet opens…');
     const form = readForm();
-    const quote = await fetchMayaQuote(form);
-    if (isBelowRecommendedMinimum(form.amount, quote)) {
-      const minimum = formatMayaAmount(quote.recommended_min_amount_in);
-      throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least ${minimum} ETH-equivalent quote units, currently about ${Number(minimum).toFixed(6)} ETH.`);
-    }
-    state.quote = quote;
-    state.lastAmount = form.amount;
-    renderQuote(quote);
+    const quote = await fetchValidatedQuote(form);
+    storeQuote(quote);
 
     const tx = buildEthTransferTx(quote, form.amount);
     setStatus('Confirm the ETH mainnet transaction in your wallet.');
     const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...tx }] });
     els.txHash.innerHTML = `<a href="https://etherscan.io/tx/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
-    setStatus('Swap submitted. Track the inbound tx on Etherscan; Maya will settle native ZEC to your transparent address.', 'ok');
+    setStatus('Swap submitted. Track the inbound tx on Etherscan; Maya will settle native ZEC to your recipient address.', 'ok');
   } catch (error) {
-    setStatus(error.message, 'error');
+    setStatus(errorMessage(error), 'error');
   } finally {
     setBusy(false);
   }
 }
 
-els.connect.addEventListener('click', () => connectWallet().catch((error) => setStatus(error.message, 'error')));
+els.connect.addEventListener('click', () => connectWallet().catch((error) => setStatus(errorMessage(error), 'error')));
 els.quote.addEventListener('click', getQuote);
 els.send.addEventListener('click', sendSwap);
 

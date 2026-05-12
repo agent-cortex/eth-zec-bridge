@@ -1,6 +1,6 @@
 # zerobridge — ETH mainnet to native ZEC
 
-Browser-only swap interface for Ethereum mainnet ETH → native transparent ZEC.
+Browser-only swap interface for Ethereum mainnet ETH → native ZEC recipients.
 
 It uses Maya Protocol directly:
 
@@ -8,7 +8,7 @@ It uses Maya Protocol directly:
 - Route: `ETH.ETH` → `ZEC.ZEC`
 - Execution: user sends ETH to the fresh Maya ETH inbound vault with the quote memo encoded in tx data.
 
-No custom Solidity is used. Per ethskills, this does not need a contract: the onchain value movement is handled by Ethereum + Maya's existing vault/router protocol, and the rest is UI.
+No custom Solidity is used. Ethereum and Maya's existing vault/router protocol handle the onchain value movement; this repo is only the browser UI.
 
 ## Run locally
 
@@ -22,7 +22,7 @@ Open `http://127.0.0.1:4174`.
 
 ## Safety notes
 
-- Transparent Zcash addresses only (`t1…` / `t3…`). Shielded/unified addresses are not supported by Maya/SwapKit for this route yet.
+- The app accepts transparent (`t1…` / `t3…`), unified (`u1…`), and shielded Sapling (`zs…`) Zcash addresses, then lets Maya perform final route validation.
 - Never cache quote vault addresses. The app refreshes the quote immediately before sending.
 - Use Ethereum mainnet only.
 - The app does not custody funds and does not ask for seed phrases or private keys.

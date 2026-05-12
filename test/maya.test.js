@@ -6,7 +6,6 @@ import {
   MAYA_QUOTE_ENDPOINT,
   ethToMayaAmount,
   formatMayaAmount,
-  isLikelyTransparentZecAddress,
   isLikelyZecAddress,
   isBelowRecommendedMinimum,
   memoToHexData,
@@ -31,14 +30,7 @@ test('formats Maya 1e8 amount units for humans', () => {
   assert.equal(formatMayaAmount('40967581'), '0.40967581');
   assert.equal(formatMayaAmount('100000000'), '1');
   assert.equal(formatMayaAmount('110211'), '0.00110211');
-});
-
-test('accepts transparent Zcash-looking addresses in the legacy transparent guard', () => {
-  assert.equal(isLikelyTransparentZecAddress('t1VnR43K5VjH7JBBc4xH2KccHLakDQvkEr8'), true);
-  assert.equal(isLikelyTransparentZecAddress('t3Vz22vK5z2LcKEdg16Yv4FFneEL1zg9ojd'), true);
-  assert.equal(isLikelyTransparentZecAddress('u1abcdef'), false);
-  assert.equal(isLikelyTransparentZecAddress('zs1abcdef'), false);
-  assert.equal(isLikelyTransparentZecAddress('0x0000000000000000000000000000000000000000'), false);
+  assert.throws(() => formatMayaAmount(undefined), /BigInt/);
 });
 
 test('accepts transparent, unified, and Sapling-looking Zcash addresses for Maya validation', () => {

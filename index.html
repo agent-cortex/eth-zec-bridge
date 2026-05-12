@@ -39,13 +39,11 @@
       header { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: -.04em; font-size: 22px; }
       .mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: white; background: linear-gradient(135deg, var(--purple), #25115d); box-shadow: 0 10px 24px rgba(75,34,200,.25); }
-      .nav { display: flex; gap: 8px; align-items: center; }
-      .nav span { padding: 10px 14px; border-radius: 999px; color: var(--muted); font-weight: 750; font-size: 14px; }
-      .nav .active { background: white; color: var(--purple); box-shadow: 0 8px 22px rgba(73, 43, 129, .08); }
+      .route-label { padding: 10px 14px; border-radius: 999px; background: white; color: var(--purple); box-shadow: 0 8px 22px rgba(73, 43, 129, .08); font-weight: 750; font-size: 14px; }
 
       button { border: 0; border-radius: 18px; padding: 14px 18px; font-size: 15px; font-weight: 850; cursor: pointer; color: white; background: var(--purple); box-shadow: 0 12px 26px rgba(75,34,200,.22); }
       button.secondary { color: var(--purple); background: white; border: 1px solid var(--line); box-shadow: 0 8px 22px rgba(73,43,129,.08); }
-      button.ghost { background: #f4f0ff; color: var(--purple); box-shadow: none; border: 1px solid var(--line); }
+      button.ghost, .settings { background: #f4f0ff; color: var(--purple); box-shadow: none; border: 1px solid var(--line); }
       button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
       .hero { text-align: center; padding: 34px 0 18px; }
@@ -58,7 +56,7 @@
       .swap-card { padding: 16px; }
       .card-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 14px; }
       .card-title { margin: 0; font-size: 18px; letter-spacing: -.03em; }
-      .settings { width: 40px; height: 40px; border-radius: 14px; padding: 0; }
+      .settings { min-width: 40px; min-height: 40px; border-radius: 14px; padding: 0 10px; display: inline-grid; place-items: center; font-weight: 850; font-size: 13px; }
 
       .asset-panel { background: #f8f5ff; border: 1px solid var(--line); border-radius: 24px; padding: 16px; }
       .asset-panel + .asset-panel { margin-top: 8px; }
@@ -98,7 +96,7 @@
 
       @media (max-width: 900px) {
         header { height: auto; padding-top: 12px; align-items: flex-start; }
-        .nav { display: none; }
+        .route-label { display: none; }
         .swap-shell { grid-template-columns: 1fr; }
         .trust { grid-template-columns: 1fr; }
       }
@@ -115,11 +113,7 @@
     <main>
       <header>
         <div class="brand"><span class="mark">Z</span> zerobridge</div>
-        <nav class="nav" aria-label="Primary">
-          <span class="active">Swap</span>
-          <span>Route</span>
-          <span>Docs</span>
-        </nav>
+        <span class="route-label">ETH → ZEC via Maya</span>
         <button id="connect" class="secondary">Connect wallet</button>
       </header>
 
@@ -133,7 +127,7 @@
         <div class="card swap-card">
           <div class="card-head">
             <h2 class="card-title">Swap</h2>
-            <button class="ghost settings" type="button" title="Slippage is editable below">3%</button>
+            <span class="settings" title="Default slippage; editable below">3%</span>
           </div>
 
           <div class="asset-panel">

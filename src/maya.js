@@ -1,16 +1,85 @@
 export const ETH_ASSET = 'ETH.ETH';
 export const ZEC_ASSET = 'ZEC.ZEC';
 export const MAYA_QUOTE_ENDPOINT = 'https://mayanode.mayachain.info/mayachain/quote/swap';
-export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-export const MAYA_ETH_ROUTER_ABI = [
-  'function depositWithExpiry(address vault, address asset, uint256 amount, string memo, uint256 expiration) payable',
-];
+
+/**
+ * Decimal amount string entered by a user, e.g. "0.125".
+ *
+ * @typedef {string} DecimalAmount
+ */
+
+/**
+ * Unsigned integer amount encoded as a base-10 string in Maya's 1e8 units.
+ *
+ * @typedef {string} MayaBaseAmount
+ */
+
+/**
+ * Numeric fields returned by Mayanode are documented as integers, but the API
+ * may serialize them as either JSON numbers or decimal strings.
+ *
+ * @typedef {string|number} MayaIntegerField
+ */
+
+/**
+ * Hex string with a 0x prefix.
+ *
+ * @typedef {`0x${string}`} HexString
+ */
+
+/**
+ * User-entered swap quote request shared by the UI and Maya helpers.
+ * `amount` is a decimal ETH string; `toleranceBps` is slippage in basis points.
+ *
+ * @typedef {object} MayaQuoteRequest
+ * @property {DecimalAmount} amount Decimal ETH amount to swap.
+ * @property {string} destination Native Zcash recipient address.
+ * @property {number} [toleranceBps]
+ */
+
+/**
+ * Fee fields in Maya quote responses, expressed in Maya's 1e8 integer units.
+ *
+ * @typedef {object} MayaQuoteFees
+ * @property {MayaIntegerField} [outbound] ZEC outbound network fee.
+ * @property {MayaIntegerField} [total] Total quote fee estimate.
+ */
+
+/**
+ * Subset of the Maya quote response consumed by this app. Amount fields use
+ * Maya's 1e8 integer units and may be returned as strings or numbers.
+ *
+ * @typedef {object} MayaQuote
+ * @property {string} inbound_address Fresh Maya ETH inbound vault address.
+ * @property {string} memo Swap memo to include as Ethereum tx data.
+ * @property {MayaIntegerField} expiry Unix timestamp in seconds.
+ * @property {MayaIntegerField} expected_amount_out Expected ZEC output in Maya 1e8 units.
+ * @property {MayaIntegerField} [recommended_min_amount_in] Minimum ETH input in Maya 1e8 units.
+ * @property {MayaQuoteFees} [fees]
+ * @property {MayaIntegerField} [total_swap_seconds]
+ */
+
+/**
+ * Ethereum transaction request shape sent to EIP-1193 wallets.
+ *
+ * @typedef {object} EthTransferTx
+ * @property {string} to Ethereum recipient address.
+ * @property {HexString} value Hex-encoded wei value.
+ * @property {HexString} data Hex-encoded Maya memo.
+ */
 
 const MAYA_DECIMALS = 8n;
 const MAYA_SCALE = 10n ** MAYA_DECIMALS;
 const ETH_DECIMALS = 18n;
 const ETH_SCALE = 10n ** ETH_DECIMALS;
+const TRANSPARENT_ZEC_ADDRESS_RE = /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/;
+const UNIFIED_ZEC_ADDRESS_RE = /^u1[a-z0-9]{40,}$/i;
+const SAPLING_ZEC_ADDRESS_RE = /^zs[a-z0-9]{40,}$/i;
 
+/**
+ * @param {DecimalAmount} input Decimal ETH input amount.
+ * @returns {MayaBaseAmount}
+ */
 export function ethToMayaAmount(input) {
   const wei = parseDecimalToUnits(input, ETH_DECIMALS);
   if (wei <= 0n) throw new Error('Amount must be positive');
@@ -19,10 +88,19 @@ export function ethToMayaAmount(input) {
   return maya.toString();
 }
 
-export function parseEthToWei(input) {
+/**
+ * @param {DecimalAmount} input Decimal ETH input amount.
+ * @returns {string} Wei amount as a base-10 integer string.
+ */
+function parseEthToWei(input) {
   return parseDecimalToUnits(input, ETH_DECIMALS).toString();
 }
 
+/**
+ * @param {string|number|bigint|null|undefined} input Decimal amount to parse.
+ * @param {bigint} decimals Number of fractional decimals in the target unit.
+ * @returns {bigint}
+ */
 function parseDecimalToUnits(input, decimals) {
   const value = String(input ?? '').trim();
   if (!/^\d+(\.\d+)?$/.test(value)) throw new Error('Enter a positive decimal amount');
@@ -31,30 +109,43 @@ function parseDecimalToUnits(input, decimals) {
   return BigInt(whole) * (10n ** decimals) + BigInt(padded || '0');
 }
 
+/**
+ * @param {MayaIntegerField|bigint} amount Amount in Maya 1e8 units.
+ * @returns {string} Decimal display amount.
+ */
 export function formatMayaAmount(amount) {
-  const raw = BigInt(String(amount || '0'));
+  const raw = BigInt(String(amount));
   const whole = raw / MAYA_SCALE;
   const fraction = (raw % MAYA_SCALE).toString().padStart(8, '0').replace(/0+$/, '');
   return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
-export function isLikelyTransparentZecAddress(address) {
-  return /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/.test(String(address || '').trim());
-}
-
+/**
+ * @param {string|null|undefined} address Native Zcash address candidate.
+ * @returns {boolean}
+ */
 export function isLikelyZecAddress(address) {
-  const value = String(address || '').trim();
+  if (typeof address !== 'string') return false;
+  const value = address.trim();
   return (
-    /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/.test(value) ||
-    /^u1[a-z0-9]{40,}$/i.test(value) ||
-    /^zs[a-z0-9]{40,}$/i.test(value)
+    TRANSPARENT_ZEC_ADDRESS_RE.test(value) ||
+    UNIFIED_ZEC_ADDRESS_RE.test(value) ||
+    SAPLING_ZEC_ADDRESS_RE.test(value)
   );
 }
 
+/**
+ * @param {string} memo Maya swap memo.
+ * @returns {HexString} UTF-8 memo encoded as Ethereum calldata.
+ */
 export function memoToHexData(memo) {
   return '0x' + Array.from(new TextEncoder().encode(memo), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * @param {MayaQuoteRequest} request
+ * @returns {URL}
+ */
 export function quoteUrl({ amount, destination, toleranceBps = 300 }) {
   if (!isLikelyZecAddress(destination)) {
     throw new Error('Enter a Zcash address: transparent t1/t3, unified u1, or shielded zs. Maya will perform final validation.');
@@ -68,17 +159,30 @@ export function quoteUrl({ amount, destination, toleranceBps = 300 }) {
   return url;
 }
 
+/**
+ * @param {MayaIntegerField|bigint|null|undefined} seconds Duration in seconds.
+ * @returns {string}
+ */
 export function secondsLabel(seconds) {
   const s = Number(seconds || 0);
   if (s < 60) return `${s}s`;
   return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
+/**
+ * @param {DecimalAmount} amount Decimal ETH input amount.
+ * @param {Pick<MayaQuote, 'recommended_min_amount_in'>} quote
+ * @returns {boolean}
+ */
 export function isBelowRecommendedMinimum(amount, quote) {
   if (!quote?.recommended_min_amount_in) return false;
   return BigInt(ethToMayaAmount(amount)) < BigInt(quote.recommended_min_amount_in);
 }
 
+/**
+ * @param {MayaQuoteRequest} request
+ * @returns {Promise<MayaQuote>}
+ */
 export async function fetchMayaQuote({ amount, destination, toleranceBps = 300 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -95,25 +199,16 @@ export async function fetchMayaQuote({ amount, destination, toleranceBps = 300 }
   }
 }
 
+/**
+ * @param {MayaQuote} quote
+ * @param {DecimalAmount} amount Decimal ETH input amount.
+ * @returns {EthTransferTx}
+ */
 export function buildEthTransferTx(quote, amount) {
   if (!quote?.inbound_address || !quote?.memo) throw new Error('Quote missing inbound address or memo');
   return {
     to: quote.inbound_address,
     value: '0x' + BigInt(parseEthToWei(amount)).toString(16),
     data: memoToHexData(quote.memo),
-  };
-}
-
-export function buildRouterDepositArgs(quote, amount) {
-  if (!quote?.router || !quote?.inbound_address || !quote?.memo || !quote?.expiry) {
-    throw new Error('Quote missing router deposit fields');
-  }
-  return {
-    router: quote.router,
-    vault: quote.inbound_address,
-    asset: ZERO_ADDRESS,
-    amountWei: parseEthToWei(amount),
-    memo: quote.memo,
-    expiry: Number(quote.expiry),
   };
 }
