@@ -80,10 +80,19 @@ export function isBelowRecommendedMinimum(amount, quote) {
 }
 
 export async function fetchMayaQuote({ amount, destination, toleranceBps = 300 }) {
-  const response = await fetch(quoteUrl({ amount, destination, toleranceBps }));
-  const data = await response.json();
-  if (!response.ok || data.error) throw new Error(data.error || `Quote failed with HTTP ${response.status}`);
-  return data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(quoteUrl({ amount, destination, toleranceBps }), { signal: controller.signal });
+    const data = await response.json();
+    if (!response.ok || data.error) throw new Error(data.error || `Quote failed with HTTP ${response.status}`);
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('Quote timed out. Maya may be slow; try again in a moment.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function buildEthTransferTx(quote, amount) {
