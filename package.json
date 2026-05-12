@@ -1,0 +1,15 @@
+{
+  "name": "eth-zec-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based Ethereum mainnet to native ZEC swap interface using Maya Protocol quotes.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "typecheck": "node --check src/*.js",
+    "build": "rm -rf dist && mkdir -p dist && cp index.html dist/ && cp -r src dist/src && cp README.md dist/",
+    "serve": "python3 -m http.server 4174 --bind 127.0.0.1 --directory dist"
+  },
+  "keywords": ["ethereum", "zcash", "maya-protocol", "bridge", "swap"],
+  "license": "MIT"
+}
