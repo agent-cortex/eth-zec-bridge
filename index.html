@@ -73,7 +73,7 @@
       .flip { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 18px; background: rgba(255,206,118,.12); border: 1px solid var(--line); margin: -2px auto; color: var(--yellow); font-weight: 1000; position: relative; z-index: 1; box-shadow: 0 12px 24px rgba(0,0,0,.18); }
 
       .field-block { margin-top: 14px; }
-      .inline-fields { display: grid; grid-template-columns: 1fr 112px; gap: 10px; }
+      .inline-fields { display: grid; grid-template-columns: 1fr; gap: 10px; }
       .actions { display: grid; grid-template-columns: .9fr 1.1fr; gap: 10px; margin-top: 14px; }
       #status { margin: 14px 2px 0; color: var(--muted); line-height: 1.45; min-height: 42px; font-size: 14px; }
       #status[data-tone="ok"] { color: var(--green); }
@@ -157,10 +157,6 @@
               <label for="slippage">Max slippage</label>
               <input class="subinput" id="slippage" inputmode="decimal" value="3" />
             </div>
-            <div>
-              <label>Route</label>
-              <div class="subinput" aria-label="Route provider">Maya</div>
-            </div>
           </div>
 
           <div class="actions">
@@ -174,7 +170,7 @@
         <aside class="side">
           <div class="card" id="quote-card" hidden>
             <div class="card-head">
-              <h2 class="card-title">Best route</h2>
+              <h2 class="card-title">Quote details</h2>
               <span class="token-pill">Live quote</span>
             </div>
             <div class="details" id="details"></div>
@@ -183,7 +179,7 @@
 
           <div class="card">
             <h2 class="card-title">How it settles</h2>
-            <p class="note">Maya observes your Ethereum vault payment, reads the memo, and signs the ZEC outbound to your recipient address. Invalid routes refund under protocol rules.</p>
+            <p class="note">Maya observes your Ethereum vault payment, reads the memo, and signs the ZEC outbound to your recipient address. Invalid swaps refund under protocol rules.</p>
             <p class="note">ZeroBridge does not custody funds, store keys, or deploy a new contract.</p>
           </div>
         </aside>
