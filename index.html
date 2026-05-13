@@ -175,6 +175,8 @@
       .body-copy,
       .route,
       .privacy,
+      .subvalue,
+      .details small,
       .note {
         color: var(--color-muted);
         font-size: var(--text-body);
@@ -216,6 +218,23 @@
 
       input:focus,
       textarea:focus { border-bottom-color: var(--color-text); }
+
+      .subvalue,
+      .details small {
+        color: var(--color-muted);
+        font-size: var(--text-small);
+        font-weight: 400;
+        letter-spacing: 0;
+        line-height: 1.35;
+        text-transform: none;
+      }
+
+      .subvalue[hidden] { display: none !important; }
+
+      .details small {
+        display: block;
+        margin-top: var(--space-1);
+      }
 
       .flow {
         color: var(--color-muted);
@@ -338,6 +357,7 @@
             <div class="field">
               <label for="amount">ETH mainnet input</label>
               <input id="amount" inputmode="decimal" placeholder="0.10" />
+              <div id="amount-usd" class="subvalue" hidden aria-live="polite"></div>
             </div>
 
             <div class="flow" aria-hidden="true">↓</div>
@@ -380,6 +400,6 @@
         <div>BUILT BY MEGABYTE0X</div>
       </footer>
     </main>
-    <script type="module" src="/src/app.js?v=xscanner-20260513"></script>
+    <script type="module" src="/src/app.js?v=usd-prices-20260513"></script>
   </body>
 </html>

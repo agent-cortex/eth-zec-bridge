@@ -6,6 +6,7 @@ import {
   isLikelyZecAddress,
   secondsLabel,
 } from './maya.js';
+import { fetchUsdPrices, formatUsd } from './prices.js';
 
 /** @typedef {import('./maya.js').MayaQuote} MayaQuote */
 /** @typedef {import('./maya.js').MayaQuoteRequest} MayaQuoteRequest */
@@ -39,7 +40,9 @@ import {
  * @typedef {object} AppState
  * @property {string|null} account Connected Ethereum account address.
  * @property {MayaQuote|null} quote Last fetched Maya quote.
+ * @property {import('./prices.js').UsdPrices|null} usdPrices Last fetched USD prices.
  * @property {number|null} expiryTimer Active quote expiry countdown interval.
+ * @property {number} priceRequestId Last amount pricing request identifier.
  */
 
 /**
@@ -51,6 +54,7 @@ import {
  * @property {HTMLTextAreaElement} destination
  * @property {HTMLInputElement} slippage
  * @property {HTMLElement} status
+ * @property {HTMLElement} amountUsd
  * @property {HTMLElement} quoteCard
  * @property {HTMLElement} details
  */
@@ -59,7 +63,7 @@ import {
 const $ = (id) => document.getElementById(id);
 
 /** @type {AppState} */
-const state = { account: null, quote: null, expiryTimer: null };
+const state = { account: null, quote: null, usdPrices: null, expiryTimer: null, priceRequestId: 0 };
 
 /** @type {UIElements} */
 const els = {
@@ -70,6 +74,7 @@ const els = {
   destination: $('destination'),
   slippage: $('slippage'),
   status: $('status'),
+  amountUsd: $('amount-usd'),
   quoteCard: $('quote-card'),
   details: $('details'),
 };
@@ -111,11 +116,81 @@ function countdownLabel(seconds) {
   return `${minutes}:${pad2(secs)}`;
 }
 
+/** @param {string} value @returns {number|null} */
+function parsePositiveAmount(value) {
+  const input = value.trim();
+  if (!/^\d+(\.\d+)?$/.test(input)) return null;
+  const amount = Number(input);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+function hideAmountUsd() {
+  els.amountUsd.textContent = '';
+  els.amountUsd.hidden = true;
+}
+
+function rerenderQuoteUsd() {
+  if (state.quote) renderQuote(state.quote);
+}
+
+function hideUsdDisplays() {
+  state.usdPrices = null;
+  hideAmountUsd();
+  rerenderQuoteUsd();
+}
+
+/** @param {number} ethAmount */
+function renderAmountUsd(ethAmount) {
+  if (!state.usdPrices) {
+    hideAmountUsd();
+    return;
+  }
+  els.amountUsd.textContent = `≈ ${formatUsd(ethAmount * state.usdPrices.ethereumUsd)} USD · 1 ETH = ${formatUsd(state.usdPrices.ethereumUsd)}`;
+  els.amountUsd.hidden = false;
+}
+
+async function updateAmountUsd() {
+  const requestId = state.priceRequestId + 1;
+  state.priceRequestId = requestId;
+  const ethAmount = parsePositiveAmount(els.amount.value);
+  if (ethAmount === null) {
+    hideAmountUsd();
+    return null;
+  }
+
+  try {
+    const prices = await fetchUsdPrices();
+    if (requestId !== state.priceRequestId) return null;
+    state.usdPrices = prices;
+    renderAmountUsd(ethAmount);
+    rerenderQuoteUsd();
+    return prices;
+  } catch (error) {
+    if (requestId === state.priceRequestId) hideUsdDisplays();
+    console.warn('USD pricing unavailable', error);
+    return null;
+  }
+}
+
 function clearExpiryCountdown() {
   if (state.expiryTimer !== null) {
     window.clearInterval(state.expiryTimer);
     state.expiryTimer = null;
   }
+}
+
+/** @param {string} expected @returns {HTMLElement} */
+function expectedZecValue(expected) {
+  const value = document.createElement('b');
+  value.textContent = `${expected} ZEC`;
+  if (state.usdPrices) {
+    const usdValue = Number(expected) * state.usdPrices.zcashUsd;
+    const usd = document.createElement('small');
+    usd.id = 'expected-zec-usd';
+    usd.textContent = `≈ ${formatUsd(usdValue)} USD`;
+    value.append(usd);
+  }
+  return value;
 }
 
 /** @param {number} expiryMs */
@@ -211,6 +286,7 @@ async function getQuote() {
     setBusy(true);
     setStatus('Fetching fresh Maya quote…');
     const form = readForm();
+    updateAmountUsd();
     const quote = await fetchValidatedQuote(form);
     storeQuote(quote);
     els.quote.textContent = 'Refresh quote';
@@ -232,16 +308,22 @@ function renderQuote(quote) {
   const outbound = formatMayaAmount(quote.fees?.outbound ?? 0);
   const total = formatMayaAmount(quote.fees?.total ?? 0);
   const expiryMs = Number(quote.expiry) * 1000;
-  els.details.replaceChildren(
-    quoteDetailRow('Expected ZEC', `${expected} ZEC`),
+  const rows = [
+    quoteDetailRow('Expected ZEC', expectedZecValue(expected)),
     quoteDetailRow('Total fees', `${total} ZEC`),
     quoteDetailRow('ZEC outbound fee', `${outbound} ZEC`),
     quoteDetailRow('Estimated time', secondsLabel(quote.total_swap_seconds)),
     quoteDetailRow('Inbound vault', quote.inbound_address, 'code'),
     quoteDetailRow('Memo', quote.memo, 'code'),
+  ];
+  if (state.usdPrices) {
+    rows.push(quoteDetailRow('ZEC PRICE', `1 ZEC = ${formatUsd(state.usdPrices.zcashUsd)} USD`));
+  }
+  rows.push(
     quoteDetailRow('Expires', Object.assign(document.createElement('b'), { id: 'quote-expiry' })),
     quoteDetailRow('Submitted tx', Object.assign(document.createElement('b'), { id: 'tx-hash', textContent: 'not sent yet' })),
   );
+  els.details.replaceChildren(...rows);
   els.quoteCard.hidden = false;
   startExpiryCountdown(expiryMs);
 }
@@ -273,6 +355,7 @@ async function sendSwap() {
 }
 
 els.connect.addEventListener('click', () => connectWallet().catch((error) => setStatus(errorMessage(error), 'error')));
+els.amount.addEventListener('input', updateAmountUsd);
 els.quote.addEventListener('click', getQuote);
 els.send.addEventListener('click', sendSwap);
 
