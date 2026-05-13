@@ -14,26 +14,26 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test('fetches ETH and ZEC USD prices from CoinGecko with a short cache', async () => {
+test('fetches ETH, USDC, and ZEC USD prices from CoinGecko with a short cache', async () => {
   const calls = [];
   globalThis.fetch = async (url) => {
     calls.push(url);
     return {
       ok: true,
-      json: async () => ({ ethereum: { usd: 3124.5 }, zcash: { usd: 23.4567 } }),
+      json: async () => ({ ethereum: { usd: 3124.5 }, 'usd-coin': { usd: 1.0001 }, zcash: { usd: 23.4567 } }),
     };
   };
 
   const first = await fetchUsdPrices();
   const second = await fetchUsdPrices();
 
-  assert.deepEqual(first, { ethereumUsd: 3124.5, zcashUsd: 23.4567 });
+  assert.deepEqual(first, { ethereumUsd: 3124.5, usdcUsd: 1.0001, zcashUsd: 23.4567 });
   assert.equal(second, first);
   assert.equal(calls.length, 1);
 
   const url = new URL(String(calls[0]));
   assert.equal(url.origin + url.pathname, COINGECKO_PRICE_ENDPOINT);
-  assert.equal(url.searchParams.get('ids'), 'ethereum,zcash');
+  assert.equal(url.searchParams.get('ids'), 'ethereum,usd-coin,zcash');
   assert.equal(url.searchParams.get('vs_currencies'), 'usd');
 });
 

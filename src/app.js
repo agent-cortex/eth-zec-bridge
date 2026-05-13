@@ -1,7 +1,10 @@
 import {
-  buildEthTransferTx,
+  DEFAULT_SOURCE_ASSET_KEY,
+  buildErc20DepositTxs,
+  buildNativeTransferTx,
   fetchMayaQuote,
   formatMayaAmount,
+  getSourceAsset,
   isBelowRecommendedMinimum,
   isLikelyZecAddress,
   secondsLabel,
@@ -20,7 +23,7 @@ import { USD_PRICE_CACHE_MS, fetchUsdPrices, formatUsd } from './prices.js';
  */
 
 /**
- * @typedef {{ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] }} WalletSwitchChainRequest
+ * @typedef {{ method: 'wallet_switchEthereumChain', params: [{ chainId: string }] }} WalletSwitchChainRequest
  */
 
 /**
@@ -47,6 +50,7 @@ import { USD_PRICE_CACHE_MS, fetchUsdPrices, formatUsd } from './prices.js';
 
 /**
  * @typedef {object} UIElements
+ * @property {NodeListOf<HTMLInputElement>} sourceAssets
  * @property {HTMLButtonElement} connect
  * @property {HTMLButtonElement} quote
  * @property {HTMLButtonElement} send
@@ -68,6 +72,7 @@ const state = { account: null, quote: null, usdPrices: null, expiryTimer: null, 
 
 /** @type {UIElements} */
 const els = {
+  sourceAssets: document.querySelectorAll('input[name="source-asset"]'),
   connect: $('connect'),
   quote: $('quote'),
   send: $('send'),
@@ -80,6 +85,38 @@ const els = {
   quoteCard: $('quote-card'),
   details: $('details'),
 };
+
+function selectedSourceAssetKey() {
+  const selected = document.querySelector('input[name="source-asset"]:checked');
+  return `ethereum:${selected?.value || 'ETH'}`;
+}
+
+function selectedSourceAsset() {
+  return getSourceAsset(selectedSourceAssetKey());
+}
+
+function selectedAssetUsdPrice() {
+  if (!state.usdPrices) return null;
+  const sourceAsset = selectedSourceAsset();
+  if (sourceAsset.symbol === 'ETH') return state.usdPrices.ethereumUsd;
+  if (sourceAsset.symbol === 'USDC') return state.usdPrices.usdcUsd;
+  return null;
+}
+
+function resetQuoteForRouteChange() {
+  state.quote = null;
+  clearExpiryCountdown();
+  els.quoteCard.hidden = true;
+  els.quote.textContent = 'Get quote';
+  els.send.disabled = true;
+  renderUsdDisplays();
+  const sourceAsset = selectedSourceAsset();
+  if (sourceAsset.supported) {
+    setStatus(`Route selected: ${sourceAsset.chainLabel} ${sourceAsset.assetLabel} → native ZEC.`);
+  } else {
+    setStatus(sourceAsset.unsupportedReason, 'error');
+  }
+}
 
 /**
  * @param {string} message
@@ -156,13 +193,15 @@ function hideUsdDisplays() {
   rerenderQuoteUsd();
 }
 
-/** @param {number} ethAmount */
-function renderAmountUsd(ethAmount) {
-  if (!state.usdPrices) {
+/** @param {number} sourceAmount */
+function renderAmountUsd(sourceAmount) {
+  const usdPrice = selectedAssetUsdPrice();
+  if (!usdPrice) {
     hideAmountUsd();
     return;
   }
-  els.amountUsd.textContent = `≈ ${formatUsd(ethAmount * state.usdPrices.ethereumUsd)} USD · 1 ETH = ${formatUsd(state.usdPrices.ethereumUsd)}`;
+  const sourceAsset = selectedSourceAsset();
+  els.amountUsd.textContent = `≈ ${formatUsd(sourceAmount * usdPrice)} USD · 1 ${sourceAsset.symbol} = ${formatUsd(usdPrice)}`;
   els.amountUsd.hidden = false;
 }
 
@@ -265,16 +304,16 @@ function requireEthereum() {
   return window.ethereum;
 }
 
-async function connectWallet() {
+async function connectWallet(expectedChainId = selectedSourceAsset().chainId) {
   const ethereum = requireEthereum();
   const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
   state.account = accounts[0];
   els.connect.textContent = `${state.account.slice(0, 6)}…${state.account.slice(-4)}`;
   const chainId = await ethereum.request({ method: 'eth_chainId' });
-  if (chainId !== '0x1') {
-    await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+  if (chainId !== expectedChainId) {
+    await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: expectedChainId }] });
   }
-  setStatus('Wallet connected on Ethereum mainnet.');
+  setStatus(`Wallet connected on ${selectedSourceAsset().chainLabel}.`);
 }
 
 /** @returns {MayaQuoteRequest} */
@@ -282,12 +321,15 @@ function readForm() {
   const amount = els.amount.value.trim();
   const destination = els.destination.value.trim();
   const toleranceBps = Math.round(Number(els.slippage.value || 3) * 100);
-  if (!amount) throw new Error('Enter an ETH amount.');
+  const sourceAssetKey = selectedSourceAssetKey();
+  const sourceAsset = getSourceAsset(sourceAssetKey);
+  if (!sourceAsset.supported) throw new Error(sourceAsset.unsupportedReason);
+  if (!amount) throw new Error(`Enter a ${sourceAsset.symbol} amount.`);
   if (!isLikelyZecAddress(destination)) {
     throw new Error('Enter a Zcash address: transparent t1/t3, unified u1, or shielded zs. Maya will perform final validation.');
   }
   if (toleranceBps < 1 || toleranceBps > 9999) throw new Error('Slippage must be between 0.01% and 99.99%.');
-  return { amount, destination, toleranceBps };
+  return { amount, destination, sourceAssetKey, fromAddress: state.account, toleranceBps };
 }
 
 /**
@@ -298,7 +340,8 @@ async function fetchValidatedQuote(form) {
   const quote = await fetchMayaQuote(form);
   if (isBelowRecommendedMinimum(form.amount, quote)) {
     const minimum = formatMayaAmount(quote.recommended_min_amount_in);
-    throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least about ${Number(minimum).toFixed(6)} ETH.`);
+    const sourceAsset = getSourceAsset(form.sourceAssetKey || DEFAULT_SOURCE_ASSET_KEY);
+    throw new Error(`Amount is below Maya's recommended minimum for this route. Use at least about ${Number(minimum).toFixed(6)} ${sourceAsset.symbol}.`);
   }
   return quote;
 }
@@ -313,7 +356,13 @@ async function getQuote() {
   try {
     setBusy(true);
     setStatus('Fetching fresh Maya quote…');
-    const form = readForm();
+    let form = readForm();
+    const sourceAsset = getSourceAsset(form.sourceAssetKey);
+    if (sourceAsset.type === 'erc20' && !state.account) {
+      setStatus(`Connect wallet first so Maya can validate the ${sourceAsset.symbol} token route…`);
+      await connectWallet(sourceAsset.chainId);
+      form = readForm();
+    }
     refreshUsdPrices();
     const quote = await fetchValidatedQuote(form);
     storeQuote(quote);
@@ -353,24 +402,41 @@ function renderQuote(quote) {
   startExpiryCountdown(expiryMs);
 }
 
+/** @param {unknown} hash */
+function renderSubmittedTx(hash) {
+  const link = document.createElement('a');
+  link.href = `https://xscanner.org/transaction/${encodeURIComponent(String(hash))}`;
+  link.target = '_blank';
+  link.rel = 'noreferrer';
+  link.textContent = String(hash);
+  $('tx-hash').replaceChildren(link);
+}
+
 async function sendSwap() {
   try {
-    if (!state.account) await connectWallet();
+    const sourceAsset = selectedSourceAsset();
+    if (!state.account) await connectWallet(sourceAsset.chainId);
     setBusy(true);
     setStatus('Refreshing quote before wallet opens…');
     const form = readForm();
     const quote = await fetchValidatedQuote(form);
     storeQuote(quote);
 
-    const tx = buildEthTransferTx(quote, form.amount);
-    setStatus('Confirm the ETH mainnet transaction in your wallet.');
+    if (sourceAsset.type === 'erc20') {
+      const txs = buildErc20DepositTxs(quote, form.amount, form.sourceAssetKey);
+      setStatus(`Approve ${sourceAsset.symbol} spend in your wallet.`);
+      await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...txs.approve }] });
+      setStatus(`Approval submitted. Now confirm the Maya router deposit on ${sourceAsset.chainLabel}.`);
+      const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...txs.deposit }] });
+      renderSubmittedTx(hash);
+      setStatus('Swap submitted. Track the transaction on XScanner; Maya will settle native ZEC to your recipient address.', 'ok');
+      return;
+    }
+
+    const tx = buildNativeTransferTx(quote, form.amount, form.sourceAssetKey);
+    setStatus(`Confirm the ${sourceAsset.chainLabel} transaction in your wallet.`);
     const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...tx }] });
-    const link = document.createElement('a');
-    link.href = `https://xscanner.org/transaction/${encodeURIComponent(String(hash))}`;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.textContent = String(hash);
-    $('tx-hash').replaceChildren(link);
+    renderSubmittedTx(hash);
     setStatus('Swap submitted. Track the transaction on XScanner; Maya will settle native ZEC to your recipient address.', 'ok');
   } catch (error) {
     setStatus(errorMessage(error), 'error');
@@ -380,10 +446,11 @@ async function sendSwap() {
 }
 
 els.connect.addEventListener('click', () => connectWallet().catch((error) => setStatus(errorMessage(error), 'error')));
+els.sourceAssets.forEach((input) => input.addEventListener('change', resetQuoteForRouteChange));
 els.amount.addEventListener('input', updateAmountUsd);
 els.quote.addEventListener('click', getQuote);
 els.send.addEventListener('click', sendSwap);
 refreshUsdPrices();
 window.setInterval(refreshUsdPrices, USD_PRICE_CACHE_MS);
 
-setStatus('Connect wallet, enter a ZEC address, quote, then send. No wrapped tokens. No custodial account.');
+setStatus('Select ETH or USDC on Ethereum mainnet, enter a ZEC address, quote, then send. No wrapped ZEC. No custodial account.');

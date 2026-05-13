@@ -10,7 +10,7 @@ test('keeps the browser app DOM contract intact', () => {
     assert.equal(html.match(new RegExp(`id="${id}"`, 'g'))?.length, 1);
   }
 
-  assert.match(html, /<script type="module" src="\/src\/app\.js\?v=zec-header-20260513"><\/script>/);
+  assert.match(html, /<script type="module" src="\/src\/app\.js\?v=eth-usdc-mainnet-20260513"><\/script>/);
 });
 
 test('keeps live USD pricing wired to the static DOM contract', () => {
@@ -20,6 +20,7 @@ test('keeps live USD pricing wired to the static DOM contract', () => {
   assert.match(html, /\.subvalue,[\s\S]*color: var\(--color-muted\)/);
   assert.match(app, /import \{ USD_PRICE_CACHE_MS, fetchUsdPrices, formatUsd \} from '\.\/prices\.js';/);
   assert.match(app, /els\.amount\.addEventListener\('input', updateAmountUsd\)/);
+  assert.match(app, /if \(sourceAsset\.symbol === 'USDC'\) return state\.usdPrices\.usdcUsd/);
   assert.match(app, /els\.zecPrice\.textContent = `1 ZEC = \$\{formatUsd\(state\.usdPrices\.zcashUsd\)\} USD`/);
   assert.match(app, /window\.setInterval\(refreshUsdPrices, USD_PRICE_CACHE_MS\)/);
   assert.doesNotMatch(app, /quoteDetailRow\('ZEC PRICE'/);
@@ -36,10 +37,16 @@ test('uses the strict minimal static UI treatment', () => {
   assert.doesNotMatch(html, /fonts\.googleapis|fonts\.gstatic|linear-gradient|radial-gradient|box-shadow|border-radius/i);
   assert.doesNotMatch(html, /Instrument Serif|Merriweather|Roboto|Cantarell|Cinzel|Habibi/i);
   assert.match(html, /ZEROBRIDGE   ETH → ZEC/);
+  assert.match(html, /Ethereum mainnet/);
+  assert.match(html, /name="source-asset" value="ETH" checked/);
+  assert.match(html, /name="source-asset" value="USDC"/);
+  assert.match(html, /aria-label="Ethereum logo"/);
+  assert.match(html, /aria-label="USDC logo"/);
+  assert.doesNotMatch(html, /Base mainnet|value="base"|BASE\.ETH|BASE\.USDC/i);
   assert.match(html, /CONNECT WALLET/);
   assert.match(html, /Get quote/);
   assert.match(html, /Swap now/);
-  assert.match(html, /ETH mainnet input/);
+  assert.match(html, /Amount/);
   assert.match(html, /<textarea id="destination"/);
   assert.match(html, /word-break: break-all/);
   assert.match(html, />↓<\/div>/);
@@ -53,6 +60,8 @@ test('keeps quoted-state details readable and actionable', () => {
   assert.match(html, /<span>Submitted tx<\/span><b id="tx-hash">not sent yet<\/b>/);
   assert.doesNotMatch(html, /#status \{\s*border-left/s);
   assert.match(app, /Quote ready\. Expires quickly — send only from this screen\./);
+  assert.match(app, /buildErc20DepositTxs\(quote, form\.amount, form\.sourceAssetKey\)/);
+  assert.match(app, /Approve \$\{sourceAsset\.symbol\} spend in your wallet\./);
   assert.match(app, /Refresh quote/);
   assert.match(app, /formatLocalTimestamp/);
   assert.match(app, /expires in/);

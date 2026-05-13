@@ -1,13 +1,14 @@
 export const COINGECKO_PRICE_ENDPOINT = 'https://api.coingecko.com/api/v3/simple/price';
 export const USD_PRICE_CACHE_MS = 30_000;
 
-const PRICE_IDS = ['ethereum', 'zcash'];
+const PRICE_IDS = ['ethereum', 'usd-coin', 'zcash'];
 const PRICE_CURRENCY = 'usd';
 const PRICE_TIMEOUT_MS = 5_000;
 
 /**
  * @typedef {object} UsdPrices
  * @property {number} ethereumUsd
+ * @property {number} usdcUsd
  * @property {number} zcashUsd
  */
 
@@ -24,7 +25,7 @@ function priceUrl() {
 
 /**
  * @param {unknown} data
- * @param {'ethereum'|'zcash'} assetId
+ * @param {'ethereum'|'usd-coin'|'zcash'} assetId
  * @returns {number}
  */
 function readUsdPrice(data, assetId) {
@@ -59,6 +60,7 @@ export async function fetchUsdPrices() {
   const data = await response.json();
   const value = {
     ethereumUsd: readUsdPrice(data, 'ethereum'),
+    usdcUsd: readUsdPrice(data, 'usd-coin'),
     zcashUsd: readUsdPrice(data, 'zcash'),
   };
   cachedUsdPrices = { fetchedAt: Date.now(), value };
