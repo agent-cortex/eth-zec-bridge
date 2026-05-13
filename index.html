@@ -203,11 +203,12 @@
       }
 
       textarea {
-        min-height: 5.5em;
-        resize: vertical;
+        line-height: var(--leading-body);
+        height: calc(5lh + var(--space-2) + var(--space-3));
+        resize: none;
+        overflow: hidden;
         overflow-wrap: anywhere;
         word-break: break-all;
-        line-height: var(--leading-body);
       }
 
       input::placeholder,
