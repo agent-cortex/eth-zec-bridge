@@ -6,7 +6,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
 
 test('keeps the browser app DOM contract intact', () => {
-  for (const id of ['connect', 'quote', 'send', 'amount', 'amount-usd', 'destination', 'slippage', 'status', 'quote-card', 'details', 'tx-hash']) {
+  for (const id of ['connect', 'zec-price', 'quote', 'send', 'amount', 'amount-usd', 'destination', 'slippage', 'status', 'quote-card', 'details', 'tx-hash']) {
     assert.equal(html.match(new RegExp(`id="${id}"`, 'g'))?.length, 1);
   }
 
@@ -14,11 +14,15 @@ test('keeps the browser app DOM contract intact', () => {
 });
 
 test('keeps live USD pricing wired to the static DOM contract', () => {
+  assert.match(html, /<div id="zec-price" class="header-price" hidden aria-live="polite"><\/div>/);
   assert.match(html, /<div id="amount-usd" class="subvalue" hidden aria-live="polite"><\/div>/);
+  assert.match(html, /\.header-price[\s\S]*text-align: center/);
   assert.match(html, /\.subvalue,[\s\S]*color: var\(--color-muted\)/);
-  assert.match(app, /import \{ fetchUsdPrices, formatUsd \} from '\.\/prices\.js';/);
+  assert.match(app, /import \{ USD_PRICE_CACHE_MS, fetchUsdPrices, formatUsd \} from '\.\/prices\.js';/);
   assert.match(app, /els\.amount\.addEventListener\('input', updateAmountUsd\)/);
-  assert.match(app, /quoteDetailRow\('ZEC PRICE', `1 ZEC = \$\{formatUsd\(state\.usdPrices\.zcashUsd\)\} USD`\)/);
+  assert.match(app, /els\.zecPrice\.textContent = `1 ZEC = \$\{formatUsd\(state\.usdPrices\.zcashUsd\)\} USD`/);
+  assert.match(app, /window\.setInterval\(refreshUsdPrices, USD_PRICE_CACHE_MS\)/);
+  assert.doesNotMatch(app, /quoteDetailRow\('ZEC PRICE'/);
   assert.match(app, /usd\.id = 'expected-zec-usd'/);
   assert.match(app, /function hideUsdDisplays\(\)/);
 });
