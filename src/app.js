@@ -196,8 +196,8 @@ async function sendSwap() {
     const tx = buildEthTransferTx(quote, form.amount);
     setStatus('Confirm the ETH mainnet transaction in your wallet.');
     const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...tx }] });
-    els.txHash.innerHTML = `<a href="https://www.mayascan.org/tx/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
-    setStatus('Swap submitted. Track the transaction on Mayascan; Maya will settle native ZEC to your recipient address.', 'ok');
+    els.txHash.innerHTML = `<a href="https://xscanner.org/transaction/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
+    setStatus('Swap submitted. Track the transaction on XScanner; Maya will settle native ZEC to your recipient address.', 'ok');
   } catch (error) {
     setStatus(errorMessage(error), 'error');
   } finally {
