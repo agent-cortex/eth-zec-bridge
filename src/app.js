@@ -6,7 +6,7 @@ import {
   isLikelyZecAddress,
   secondsLabel,
 } from './maya.js';
-import { fetchUsdPrices, formatUsd } from './prices.js';
+import { USD_PRICE_CACHE_MS, fetchUsdPrices, formatUsd } from './prices.js';
 
 /** @typedef {import('./maya.js').MayaQuote} MayaQuote */
 /** @typedef {import('./maya.js').MayaQuoteRequest} MayaQuoteRequest */
@@ -55,6 +55,7 @@ import { fetchUsdPrices, formatUsd } from './prices.js';
  * @property {HTMLInputElement} slippage
  * @property {HTMLElement} status
  * @property {HTMLElement} amountUsd
+ * @property {HTMLElement} zecPrice
  * @property {HTMLElement} quoteCard
  * @property {HTMLElement} details
  */
@@ -75,6 +76,7 @@ const els = {
   slippage: $('slippage'),
   status: $('status'),
   amountUsd: $('amount-usd'),
+  zecPrice: $('zec-price'),
   quoteCard: $('quote-card'),
   details: $('details'),
 };
@@ -129,6 +131,20 @@ function hideAmountUsd() {
   els.amountUsd.hidden = true;
 }
 
+function hideHeaderZecPrice() {
+  els.zecPrice.textContent = '';
+  els.zecPrice.hidden = true;
+}
+
+function renderHeaderZecPrice() {
+  if (!state.usdPrices) {
+    hideHeaderZecPrice();
+    return;
+  }
+  els.zecPrice.textContent = `1 ZEC = ${formatUsd(state.usdPrices.zcashUsd)} USD`;
+  els.zecPrice.hidden = false;
+}
+
 function rerenderQuoteUsd() {
   if (state.quote) renderQuote(state.quote);
 }
@@ -136,6 +152,7 @@ function rerenderQuoteUsd() {
 function hideUsdDisplays() {
   state.usdPrices = null;
   hideAmountUsd();
+  hideHeaderZecPrice();
   rerenderQuoteUsd();
 }
 
@@ -149,27 +166,38 @@ function renderAmountUsd(ethAmount) {
   els.amountUsd.hidden = false;
 }
 
-async function updateAmountUsd() {
-  const requestId = state.priceRequestId + 1;
-  state.priceRequestId = requestId;
+function renderUsdDisplays() {
   const ethAmount = parsePositiveAmount(els.amount.value);
   if (ethAmount === null) {
     hideAmountUsd();
-    return null;
+  } else {
+    renderAmountUsd(ethAmount);
   }
+  renderHeaderZecPrice();
+  rerenderQuoteUsd();
+}
+
+async function refreshUsdPrices() {
+  const requestId = state.priceRequestId + 1;
+  state.priceRequestId = requestId;
 
   try {
     const prices = await fetchUsdPrices();
     if (requestId !== state.priceRequestId) return null;
     state.usdPrices = prices;
-    renderAmountUsd(ethAmount);
-    rerenderQuoteUsd();
+    renderUsdDisplays();
     return prices;
   } catch (error) {
     if (requestId === state.priceRequestId) hideUsdDisplays();
     console.warn('USD pricing unavailable', error);
     return null;
   }
+}
+
+function updateAmountUsd() {
+  if (state.usdPrices) renderUsdDisplays();
+  else hideAmountUsd();
+  return refreshUsdPrices();
 }
 
 function clearExpiryCountdown() {
@@ -286,7 +314,7 @@ async function getQuote() {
     setBusy(true);
     setStatus('Fetching fresh Maya quote…');
     const form = readForm();
-    updateAmountUsd();
+    refreshUsdPrices();
     const quote = await fetchValidatedQuote(form);
     storeQuote(quote);
     els.quote.textContent = 'Refresh quote';
@@ -316,9 +344,6 @@ function renderQuote(quote) {
     quoteDetailRow('Inbound vault', quote.inbound_address, 'code'),
     quoteDetailRow('Memo', quote.memo, 'code'),
   ];
-  if (state.usdPrices) {
-    rows.push(quoteDetailRow('ZEC PRICE', `1 ZEC = ${formatUsd(state.usdPrices.zcashUsd)} USD`));
-  }
   rows.push(
     quoteDetailRow('Expires', Object.assign(document.createElement('b'), { id: 'quote-expiry' })),
     quoteDetailRow('Submitted tx', Object.assign(document.createElement('b'), { id: 'tx-hash', textContent: 'not sent yet' })),
@@ -358,5 +383,7 @@ els.connect.addEventListener('click', () => connectWallet().catch((error) => set
 els.amount.addEventListener('input', updateAmountUsd);
 els.quote.addEventListener('click', getQuote);
 els.send.addEventListener('click', sendSwap);
+refreshUsdPrices();
+window.setInterval(refreshUsdPrices, USD_PRICE_CACHE_MS);
 
 setStatus('Connect wallet, enter a ZEC address, quote, then send. No wrapped tokens. No custodial account.');

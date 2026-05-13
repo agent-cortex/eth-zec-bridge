@@ -109,6 +109,7 @@
 
       .brand,
       .meta,
+      .header-price,
       label,
       .label,
       .section-title,
@@ -130,6 +131,14 @@
         font: inherit;
         letter-spacing: .16em;
       }
+
+      .header-price {
+        flex: 1 1 auto;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .header-price[hidden] { display: none !important; }
 
       #connect {
         min-height: 44px;
@@ -337,6 +346,8 @@
         }
 
         #connect { text-align: left; }
+
+        .header-price { text-align: left; }
       }
 
       @media (max-width: 760px) {
@@ -348,6 +359,7 @@
     <main>
       <header>
         <h1 class="brand">ZEROBRIDGE   ETH → ZEC</h1>
+        <div id="zec-price" class="header-price" hidden aria-live="polite"></div>
         <button id="connect" type="button">CONNECT WALLET</button>
       </header>
 
