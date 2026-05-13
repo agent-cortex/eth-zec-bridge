@@ -39,6 +39,7 @@ import {
  * @typedef {object} AppState
  * @property {string|null} account Connected Ethereum account address.
  * @property {MayaQuote|null} quote Last fetched Maya quote.
+ * @property {number|null} expiryTimer Active quote expiry countdown interval.
  */
 
 /**
@@ -47,7 +48,7 @@ import {
  * @property {HTMLButtonElement} quote
  * @property {HTMLButtonElement} send
  * @property {HTMLInputElement} amount
- * @property {HTMLInputElement} destination
+ * @property {HTMLTextAreaElement} destination
  * @property {HTMLInputElement} slippage
  * @property {HTMLElement} status
  * @property {HTMLElement} quoteCard
@@ -59,7 +60,7 @@ import {
 const $ = (id) => document.getElementById(id);
 
 /** @type {AppState} */
-const state = { account: null, quote: null };
+const state = { account: null, quote: null, expiryTimer: null };
 
 /** @type {UIElements} */
 const els = {
@@ -92,6 +93,43 @@ function errorMessage(error) {
   if (error instanceof Error) return error.message;
   console.error('Non-Error rejection', error);
   return 'Unexpected error. See browser console for details.';
+}
+
+/** @param {number} value @returns {string} */
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+/** @param {Date} date @returns {string} */
+function formatLocalTimestamp(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
+/** @param {number} seconds @returns {string} */
+function countdownLabel(seconds) {
+  const remaining = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  return `${minutes}:${pad2(secs)}`;
+}
+
+function clearExpiryCountdown() {
+  if (state.expiryTimer !== null) {
+    window.clearInterval(state.expiryTimer);
+    state.expiryTimer = null;
+  }
+}
+
+/** @param {number} expiryMs */
+function startExpiryCountdown(expiryMs) {
+  clearExpiryCountdown();
+  const expiry = $('quote-expiry');
+  const update = () => {
+    const seconds = (expiryMs - Date.now()) / 1000;
+    expiry.textContent = `${formatLocalTimestamp(new Date(expiryMs))}  ·  expires in ${countdownLabel(seconds)}`;
+  };
+  update();
+  state.expiryTimer = window.setInterval(update, 1000);
 }
 
 /** @param {boolean} isBusy */
@@ -157,10 +195,13 @@ async function getQuote() {
     const form = readForm();
     const quote = await fetchValidatedQuote(form);
     storeQuote(quote);
-    setStatus('Quote ready. It expires quickly; send only from this screen.', 'ok');
+    els.quote.textContent = 'Refresh quote';
+    setStatus('Quote ready. Expires quickly — send only from this screen.', 'ok');
   } catch (error) {
     state.quote = null;
+    clearExpiryCountdown();
     els.quoteCard.hidden = true;
+    els.quote.textContent = 'Get quote';
     setStatus(errorMessage(error), 'error');
   } finally {
     setBusy(false);
@@ -172,6 +213,7 @@ function renderQuote(quote) {
   const expected = formatMayaAmount(quote.expected_amount_out);
   const outbound = formatMayaAmount(quote.fees?.outbound ?? 0);
   const total = formatMayaAmount(quote.fees?.total ?? 0);
+  const expiryMs = Number(quote.expiry) * 1000;
   els.details.innerHTML = `
     <div><span>Expected ZEC</span><b>${expected} ZEC</b></div>
     <div><span>Total fees</span><b>${total} ZEC</b></div>
@@ -179,9 +221,11 @@ function renderQuote(quote) {
     <div><span>Estimated time</span><b>${secondsLabel(quote.total_swap_seconds)}</b></div>
     <div><span>Inbound vault</span><code>${quote.inbound_address}</code></div>
     <div><span>Memo</span><code>${quote.memo}</code></div>
-    <div><span>Expires</span><b>${new Date(Number(quote.expiry) * 1000).toLocaleString()}</b></div>
+    <div><span>Expires</span><b id="quote-expiry"></b></div>
+    <div><span>Submitted tx</span><b id="tx-hash">not sent yet</b></div>
   `;
   els.quoteCard.hidden = false;
+  startExpiryCountdown(expiryMs);
 }
 
 async function sendSwap() {
@@ -196,7 +240,7 @@ async function sendSwap() {
     const tx = buildEthTransferTx(quote, form.amount);
     setStatus('Confirm the ETH mainnet transaction in your wallet.');
     const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...tx }] });
-    els.txHash.innerHTML = `<a href="https://xscanner.org/transaction/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
+    $('tx-hash').innerHTML = `<a href="https://xscanner.org/transaction/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
     setStatus('Swap submitted. Track the transaction on XScanner; Maya will settle native ZEC to your recipient address.', 'ok');
   } catch (error) {
     setStatus(errorMessage(error), 'error');
