@@ -41,7 +41,7 @@ test('uses the strict minimal static UI treatment', () => {
   assert.match(html, /name="source-asset" value="ETH" checked/);
   assert.match(html, /name="source-asset" value="USDC"/);
   assert.match(html, /aria-label="Ethereum logo"/);
-  assert.match(html, /aria-label="USDC logo"/);
+  assert.match(html, /<img class="asset-logo" src="\/src\/assets\/usdc-logo\.jpg" alt="USDC logo"/);
   assert.doesNotMatch(html, /Base mainnet|value="base"|BASE\.ETH|BASE\.USDC/i);
   assert.match(html, /CONNECT WALLET/);
   assert.match(html, /Get quote/);
