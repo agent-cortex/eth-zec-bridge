@@ -5,119 +5,436 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZeroBridge | ETH → ZEC Swap</title>
     <meta name="description" content="Swap Ethereum mainnet ETH to native ZEC in the browser using Maya Protocol." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cantarell:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400..900&family=Habibi&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap" rel="stylesheet" />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #1d1919;
-        --bg-2: #0900c3;
-        --ink: #fff7e4;
-        --muted: #ffce76;
-        --card: rgba(29, 25, 25, .82);
-        --line: rgba(255, 206, 118, .20);
-        --blue: #0075f6;
-        --blue-2: #0900c3;
-        --yellow: #ffce76;
-        --green: #ffce76;
-        --red: #ff6b6b;
-        --shadow: 0 26px 70px rgba(0, 0, 0, .34);
-        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --bg: #070808;
+        --surface: #0c0e0e;
+        --surface-2: #111414;
+        --surface-3: #151918;
+        --ink: #f3f0e8;
+        --muted: #9c9990;
+        --dim: #66635d;
+        --line: rgba(243, 240, 232, .11);
+        --line-strong: rgba(243, 240, 232, .18);
+        --accent: #d7c58a;
+        --accent-2: #8ca394;
+        --ok: #a9c8a0;
+        --red: #df8f83;
+        --shadow: 0 24px 80px rgba(0, 0, 0, .42);
+        font-family: "Cantarell", ui-sans-serif, system-ui, sans-serif;
         background: var(--bg);
         color: var(--ink);
       }
 
       * { box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; }
       body {
         margin: 0;
-        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
         background:
-          radial-gradient(circle at 12% 6%, rgba(0, 117, 246, .32), transparent 30rem),
-          radial-gradient(circle at 88% 20%, rgba(255, 206, 118, .20), transparent 24rem),
-          linear-gradient(180deg, var(--bg) 0%, #171313 58%, #090623 100%);
+          radial-gradient(circle at 50% -18%, rgba(215, 197, 138, .11), transparent 30rem),
+          radial-gradient(circle at 85% 18%, rgba(140, 163, 148, .08), transparent 24rem),
+          linear-gradient(180deg, #090a0a 0%, var(--bg) 48%, #050606 100%);
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(circle at center, black 0%, transparent 74%);
       }
 
-      main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 56px; }
-      header { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: -.04em; font-size: 22px; }
-      .mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; color: #1d1919; background: linear-gradient(135deg, var(--yellow), var(--blue)); box-shadow: 0 10px 24px rgba(0,117,246,.22); }
+      main {
+        width: min(1180px, calc(100vw - 40px));
+        height: 100dvh;
+        margin: 0 auto;
+        padding: clamp(14px, 2vh, 24px) 0;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        gap: clamp(12px, 1.8vh, 18px);
+      }
 
-      button { border: 0; border-radius: 18px; padding: 14px 18px; font-size: 15px; font-weight: 850; cursor: pointer; color: white; background: var(--blue); box-shadow: 0 12px 26px rgba(0,117,246,.26); }
-      button.secondary { color: var(--yellow); background: rgba(255,206,118,.08); border: 1px solid var(--line); box-shadow: 0 8px 22px rgba(0,0,0,.18); }
-      button.ghost, .settings { background: rgba(255, 206, 118, .10); color: var(--yellow); box-shadow: none; border: 1px solid var(--line); }
-      button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+      header, .meta-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 10px;
+        letter-spacing: .18em;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .brand strong {
+        font-family: "Cinzel", serif;
+        color: var(--ink);
+        font-size: 18px;
+        letter-spacing: .04em;
+        font-weight: 600;
+        text-transform: none;
+      }
+      .mark {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 22px rgba(215, 197, 138, .45);
+      }
 
-      .hero { text-align: center; padding: 34px 0 18px; }
-      .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); color: var(--yellow); padding: 9px 13px; border-radius: 999px; background: rgba(255,206,118,.08); font-weight: 800; font-size: 13px; }
-      h1 { font-size: clamp(40px, 7vw, 84px); line-height: .92; letter-spacing: -.075em; margin: 18px auto 14px; max-width: 820px; color: var(--yellow); }
-      .lead { font-size: 18px; color: var(--muted); max-width: 650px; line-height: 1.55; margin: 0 auto; }
+      button {
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 12px 17px;
+        min-height: 44px;
+        font: 700 13px/1 "Cantarell", sans-serif;
+        cursor: pointer;
+        color: #090a0a;
+        background: var(--ink);
+        box-shadow: 0 14px 38px rgba(0, 0, 0, .24);
+        transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+      }
+      button:hover { transform: translateY(-1px); }
+      button:focus-visible, input:focus-visible { outline: 2px solid rgba(215, 197, 138, .72); outline-offset: 3px; }
+      button.secondary, button.ghost, .settings {
+        color: var(--ink);
+        background: rgba(243, 240, 232, .045);
+        border-color: var(--line-strong);
+        box-shadow: none;
+      }
+      button:disabled { opacity: .42; cursor: not-allowed; transform: none; }
 
-      .swap-shell { display: grid; grid-template-columns: minmax(0, 580px) minmax(280px, 360px); gap: 22px; align-items: start; justify-content: center; margin-top: 28px; }
-      .card { border: 1px solid var(--line); background: var(--card); backdrop-filter: blur(18px); border-radius: 30px; padding: 18px; box-shadow: var(--shadow); }
-      .swap-card { padding: 16px; }
-      .card-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 14px; }
-      .card-title { margin: 0; font-size: 18px; letter-spacing: -.03em; }
-      .settings { min-width: 40px; min-height: 40px; border-radius: 14px; padding: 0 10px; display: inline-grid; place-items: center; font-weight: 850; font-size: 13px; }
+      .hero {
+        text-align: center;
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+      }
+      .eyebrow {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .28em;
+        font-size: clamp(10px, 1.2vw, 12px);
+        font-weight: 700;
+      }
+      h1 {
+        margin: 0;
+        max-width: 980px;
+        color: var(--ink);
+        font-family: "Merriweather", Georgia, serif;
+        font-size: clamp(34px, 6.8vh, 72px);
+        line-height: .98;
+        letter-spacing: -.055em;
+        font-weight: 560;
+        text-wrap: balance;
+      }
+      .lead {
+        margin: 0;
+        max-width: 720px;
+        color: var(--muted);
+        font-size: clamp(13px, 1.7vh, 16px);
+        line-height: 1.45;
+        text-wrap: pretty;
+      }
 
-      .asset-panel { background: rgba(255, 206, 118, .08); border: 1px solid var(--line); border-radius: 24px; padding: 16px; }
-      .asset-panel + .asset-panel { margin-top: 8px; }
-      .asset-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: var(--muted); font-size: 13px; font-weight: 800; }
-      .token-pill { display: inline-flex; align-items: center; gap: 9px; background: rgba(255,206,118,.10); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 8px 12px; font-weight: 900; }
-      .coin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: white; font-size: 12px; font-weight: 900; }
-      .eth { background: linear-gradient(135deg, var(--blue), var(--blue-2)); }
-      .zec { background: linear-gradient(135deg, var(--yellow), var(--blue)); color: #1d1919; }
-      .amount-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
-      label { display: block; color: var(--muted); font-size: 13px; font-weight: 850; margin: 0 0 8px; }
-      input { width: 100%; border: 0; background: transparent; color: var(--ink); padding: 0; font-size: 34px; font-weight: 850; letter-spacing: -.045em; outline: none; }
-      input::placeholder { color: rgba(255, 247, 228, .34); }
-      .subinput { border: 1px solid var(--line); background: rgba(255,247,228,.06); border-radius: 16px; padding: 13px 14px; font-size: 14px; font-weight: 700; letter-spacing: 0; }
-      .subinput:focus { box-shadow: 0 0 0 4px rgba(0,117,246,.20); border-color: rgba(0,117,246,.58); }
-      .flip { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 18px; background: rgba(255,206,118,.12); border: 1px solid var(--line); margin: -2px auto; color: var(--yellow); font-weight: 1000; position: relative; z-index: 1; box-shadow: 0 12px 24px rgba(0,0,0,.18); }
+      .swap-shell {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(430px, 1.08fr) minmax(310px, .72fr);
+        gap: clamp(14px, 2vw, 22px);
+        align-items: stretch;
+      }
+      .card {
+        min-height: 0;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.022));
+        border-radius: 26px;
+        padding: clamp(14px, 2vh, 18px);
+        box-shadow: var(--shadow);
+      }
+      .card[hidden] { display: none !important; }
+      .swap-card, .side { display: grid; min-height: 0; }
+      .swap-card { grid-template-rows: auto auto auto auto auto auto 1fr; gap: clamp(8px, 1.15vh, 12px); }
+      .side { grid-template-rows: minmax(0, 1fr) auto; gap: clamp(10px, 1.5vh, 14px); }
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 32px;
+      }
+      .card-title {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .22em;
+        font-weight: 700;
+      }
+      .settings {
+        display: inline-grid;
+        place-items: center;
+        min-width: 38px;
+        min-height: 32px;
+        border-radius: 999px;
+        padding: 0 11px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
 
-      .field-block { margin-top: 14px; }
-      .inline-fields { display: grid; grid-template-columns: 1fr; gap: 10px; }
-      .actions { display: grid; grid-template-columns: .9fr 1.1fr; gap: 10px; margin-top: 14px; }
-      #status { margin: 14px 2px 0; color: var(--muted); line-height: 1.45; min-height: 42px; font-size: 14px; }
-      #status[data-tone="ok"] { color: var(--green); }
+      .asset-panel {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: clamp(12px, 1.6vh, 16px);
+      }
+      .asset-top, .amount-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+      .asset-top {
+        margin-bottom: 9px;
+        color: var(--dim);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .18em;
+        font-weight: 700;
+      }
+      .token-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        padding: 7px 10px;
+        color: var(--ink);
+        background: rgba(255,255,255,.035);
+        letter-spacing: .02em;
+        text-transform: none;
+      }
+      .coin {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #090a0a;
+        background: var(--accent);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .eth { background: #b5b9c9; }
+      .zec { background: var(--accent); }
+      label {
+        display: block;
+        margin: 0 0 7px;
+        color: var(--dim);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .18em;
+        font-weight: 700;
+      }
+      input {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        padding: 0;
+        font: 700 clamp(30px, 5.8vh, 54px)/1 "Cantarell", sans-serif;
+        letter-spacing: -.06em;
+        outline: none;
+      }
+      input::placeholder { color: rgba(243, 240, 232, .22); }
+      .subinput {
+        border: 1px solid var(--line);
+        background: #090b0b;
+        border-radius: 16px;
+        padding: 12px 13px;
+        font-size: 14px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+      .subinput:focus { border-color: rgba(215, 197, 138, .48); }
+      .flip {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        justify-self: center;
+        margin: -2px 0;
+        border-radius: 50%;
+        background: var(--bg);
+        border: 1px solid var(--line-strong);
+        color: var(--accent);
+        font-size: 15px;
+      }
+      .field-block { margin: 0; }
+      .inline-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      #status {
+        align-self: end;
+        min-height: 34px;
+        color: var(--muted);
+        line-height: 1.35;
+        font-size: 13px;
+      }
+      #status[data-tone="ok"] { color: var(--ok); }
       #status[data-tone="error"] { color: var(--red); }
 
-      .side { display: grid; gap: 14px; }
-      .details { display: grid; gap: 10px; }
-      .details div { display: grid; grid-template-columns: 1fr; gap: 5px; border-bottom: 1px solid var(--line); padding: 0 0 10px; }
-      .details span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 850; }
-      .details b { font-size: 16px; }
-      code { overflow-wrap: anywhere; color: var(--blue); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-      .note, .warn { color: var(--muted); line-height: 1.55; font-size: 14px; }
-      .warn { border: 1px solid rgba(255,206,118,.22); background: rgba(255,206,118,.10); color: var(--ink); padding: 14px; border-radius: 20px; margin-top: 12px; }
-      .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px auto 0; max-width: 760px; }
-      .trust-card { background: rgba(29,25,25,.72); border: 1px solid var(--line); border-radius: 22px; padding: 14px; text-align: center; box-shadow: 0 14px 32px rgba(0,0,0,.18); }
-      .trust-card strong { display: block; color: var(--yellow); font-size: 22px; letter-spacing: -.04em; }
-      .trust-card span { color: var(--muted); font-size: 12px; font-weight: 800; }
-      a { color: var(--blue); }
+      .details { display: grid; gap: 7px; }
+      .details div {
+        display: grid;
+        grid-template-columns: minmax(88px, .55fr) minmax(0, 1fr);
+        gap: 10px;
+        align-items: baseline;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 7px;
+      }
+      .details span {
+        color: var(--dim);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .16em;
+        font-weight: 700;
+      }
+      .details b { font-size: clamp(13px, 1.7vh, 16px); font-weight: 700; }
+      code {
+        color: var(--accent);
+        overflow-wrap: anywhere;
+        font-family: "Cantarell", ui-sans-serif, sans-serif;
+        font-size: 11px;
+      }
+      .note, .warn {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.48;
+        font-size: clamp(12px, 1.65vh, 14px);
+      }
+      .warn {
+        border: 1px solid rgba(215, 197, 138, .16);
+        background: rgba(215, 197, 138, .055);
+        color: #d7d0bc;
+        padding: clamp(11px, 1.5vh, 14px);
+        border-radius: 18px;
+      }
+      .side .card {
+        display: grid;
+        align-content: start;
+        gap: 13px;
+      }
+      .side .card:not([hidden]) { min-height: 0; }
+      .how-title {
+        margin: 0;
+        font-family: "Merriweather", Georgia, serif;
+        font-size: clamp(20px, 3.2vh, 30px);
+        line-height: 1.05;
+        letter-spacing: -.04em;
+        font-weight: 520;
+      }
+      .route-line {
+        min-height: 90px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 12px;
+      }
+      .route-node {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface-2);
+        padding: 13px;
+      }
+      .route-node strong { display: block; font-size: 22px; letter-spacing: -.04em; }
+      .route-node span { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .15em; }
+      .route-arrow { color: var(--accent); }
+      a { color: var(--accent); text-decoration-color: rgba(215, 197, 138, .35); }
+
+      .meta-row {
+        border-top: 1px solid var(--line);
+        padding-top: clamp(10px, 1.5vh, 14px);
+      }
+      .trust {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        width: min(650px, 100%);
+      }
+      .trust-card { text-align: left; }
+      .trust-card strong {
+        display: block;
+        color: var(--ink);
+        font-size: clamp(16px, 2.4vh, 22px);
+        line-height: 1;
+        letter-spacing: -.04em;
+      }
+      .trust-card span {
+        color: var(--dim);
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .14em;
+      }
+      .source {
+        margin: 0;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: .18em;
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
 
       @media (max-width: 900px) {
-        header { height: auto; padding-top: 12px; align-items: flex-start; }
+        body { overflow: auto; }
+        main { height: auto; min-height: 100dvh; grid-template-rows: auto; }
         .swap-shell { grid-template-columns: 1fr; }
-        .trust { grid-template-columns: 1fr; }
+        .side { grid-template-rows: auto; }
+        .meta-row { align-items: flex-start; flex-direction: column; }
       }
       @media (max-width: 560px) {
-        main { width: min(100% - 20px, 1120px); padding-bottom: 32px; }
-        header { flex-direction: column; }
-        .hero { padding-top: 22px; }
-        .inline-fields, .actions, .amount-row { grid-template-columns: 1fr; }
-        input { font-size: 30px; }
+        main { width: min(100vw - 22px, 1180px); }
+        header { align-items: flex-start; }
+        .brand { letter-spacing: .1em; }
+        h1 { font-size: 36px; }
+        .amount-row, .actions, .trust { grid-template-columns: 1fr; }
+        .details div { grid-template-columns: 1fr; }
+      }
+      @media (max-height: 720px) and (min-width: 901px) {
+        main { gap: 10px; padding: 12px 0; }
+        h1 { font-size: clamp(32px, 5.8vh, 48px); }
+        .lead { display: none; }
+        .swap-card { gap: 8px; }
+        .asset-panel { padding: 12px; }
+        .warn { display: none; }
+        .route-line { min-height: 64px; }
+        .route-node strong { font-size: 18px; }
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <div class="brand"><span class="mark">Z</span> zerobridge</div>
+        <div class="brand"><span class="mark" aria-hidden="true"></span><strong>ZeroBridge</strong><span>ETH → ZEC</span></div>
         <button id="connect" class="secondary">Connect wallet</button>
       </header>
 
       <section class="hero">
         <div class="eyebrow">Ethereum mainnet to native Zcash</div>
-        <h1>Swap ETH to ZEC in one move.</h1>
-        <p class="lead">Quote Maya liquidity, send one ETH transaction, receive native ZEC to transparent, unified, or shielded addresses.</p>
+        <h1>Swap ETH to ZEC in one clean move.</h1>
+        <p class="lead">Quote Maya liquidity, sign one ETH transaction, and receive native ZEC to a transparent, unified, or shielded address.</p>
       </section>
 
       <section class="swap-shell">
@@ -164,7 +481,7 @@
             <button id="send" disabled>Swap now</button>
           </div>
           <div id="status"></div>
-          <div class="warn">For best privacy, use a fresh shielded/unified address. The destination is still included in the public Ethereum memo.</div>
+          <div class="warn">Privacy note: use a fresh shielded or unified address. The destination is still included in the public Ethereum memo.</div>
         </div>
 
         <aside class="side">
@@ -178,17 +495,25 @@
           </div>
 
           <div class="card">
-            <h2 class="card-title">How it settles</h2>
-            <p class="note">Maya observes your Ethereum vault payment, reads the memo, and signs the ZEC outbound to your recipient address. Invalid swaps refund under protocol rules.</p>
+            <h2 class="how-title">One route. No wrapper. No account.</h2>
+            <div class="route-line" aria-hidden="true">
+              <div class="route-node"><span>Send</span><strong>ETH</strong></div>
+              <div class="route-arrow">→</div>
+              <div class="route-node"><span>Receive</span><strong>ZEC</strong></div>
+            </div>
+            <p class="note">Maya observes your Ethereum vault payment, reads the memo, and signs the native ZEC outbound to your recipient address.</p>
             <p class="note">ZeroBridge does not custody funds, store keys, or deploy a new contract.</p>
           </div>
         </aside>
       </section>
 
-      <section class="trust" aria-label="Trust summary">
-        <div class="trust-card"><strong>1 tx</strong><span>from ETH wallet</span></div>
-        <div class="trust-card"><strong>0 custody</strong><span>self-custodial flow</span></div>
-        <div class="trust-card"><strong>ZEC</strong><span>native receive</span></div>
+      <section class="meta-row" aria-label="Trust summary">
+        <div class="trust">
+          <div class="trust-card"><strong>1 tx</strong><span>from ETH wallet</span></div>
+          <div class="trust-card"><strong>0 custody</strong><span>self-custodial flow</span></div>
+          <div class="trust-card"><strong>ZEC</strong><span>native receive</span></div>
+        </div>
+        <p class="source">Powered by Maya Protocol</p>
       </section>
     </main>
     <script type="module" src="/src/app.js"></script>
