@@ -5,515 +5,361 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZeroBridge | ETH → ZEC Swap</title>
     <meta name="description" content="Swap Ethereum mainnet ETH to native ZEC in the browser using Maya Protocol." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cantarell:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@400..900&family=Habibi&family=Instrument+Serif:ital@0;1&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #070808;
-        --surface: #0c0e0e;
-        --surface-2: #111414;
-        --surface-3: #151918;
-        --ink: #f3f0e8;
-        --muted: #9c9990;
-        --dim: #66635d;
-        --line: rgba(243, 240, 232, .11);
-        --line-strong: rgba(243, 240, 232, .18);
-        --accent: #d7c58a;
-        --accent-2: #8ca394;
-        --ok: #a9c8a0;
-        --red: #df8f83;
-        --shadow: 0 24px 80px rgba(0, 0, 0, .42);
-        font-family: "Roboto", "Cantarell", ui-sans-serif, system-ui, sans-serif;
-        background: var(--bg);
-        color: var(--ink);
+        --color-bg: #030303;
+        --color-text: #eeeeee;
+        --color-muted: #8c8c8c;
+        --color-faint: #4a4a4a;
+        --color-line: #2a2a2a;
+        --color-line-strong: #cfcfcf;
+        --color-error: #b8b8b8;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --space-8: 64px;
+        --width-page: 640px;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --text-body: 14px;
+        --text-small: 11px;
+        --text-large: clamp(52px, 15vw, 112px);
+        --leading-body: 1.55;
+        --leading-tight: .9;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: var(--font-mono);
+        font-size: var(--text-body);
       }
 
       * { box-sizing: border-box; }
-      html, body { height: 100%; overflow: hidden; }
+
+      html { min-width: 0; }
+
       body {
         margin: 0;
+        min-width: 0;
         min-height: 100dvh;
-        overflow: hidden;
-        background:
-          radial-gradient(circle at 50% -18%, rgba(215, 197, 138, .11), transparent 30rem),
-          radial-gradient(circle at 85% 18%, rgba(140, 163, 148, .08), transparent 24rem),
-          linear-gradient(180deg, #090a0a 0%, var(--bg) 48%, #050606 100%);
-      }
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image: linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
-        background-size: 72px 72px;
-        mask-image: radial-gradient(circle at center, black 0%, transparent 74%);
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: var(--font-mono);
+        font-size: var(--text-body);
+        line-height: var(--leading-body);
       }
 
-      main {
-        width: min(1180px, calc(100vw - 40px));
-        height: 100dvh;
-        margin: 0 auto;
-        padding: clamp(14px, 2vh, 24px) 0;
-        display: grid;
-        grid-template-rows: auto auto minmax(0, 1fr) auto;
-        gap: clamp(12px, 1.8vh, 18px);
-      }
+      body, button, input, code { font-family: var(--font-mono); }
 
-      header, .meta-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-      }
-      .brand {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 10px;
-        letter-spacing: .18em;
-        text-transform: uppercase;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .brand strong {
-        font-family: "Cinzel", serif;
-        color: var(--ink);
-        font-size: 18px;
-        letter-spacing: .04em;
-        font-weight: 600;
-        text-transform: none;
-      }
-      .mark {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 22px rgba(215, 197, 138, .45);
+      button, input {
+        color: inherit;
+        font: inherit;
       }
 
       button {
-        border: 1px solid transparent;
-        border-radius: 999px;
-        padding: 12px 17px;
-        min-height: 44px;
-        font: 700 13px/1 "Roboto", "Cantarell", sans-serif;
-        cursor: pointer;
-        color: #090a0a;
-        background: var(--ink);
-        box-shadow: 0 14px 38px rgba(0, 0, 0, .24);
-        transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
-      }
-      button:hover { transform: translateY(-1px); }
-      button:focus-visible, input:focus-visible { outline: 2px solid rgba(215, 197, 138, .72); outline-offset: 3px; }
-      button.secondary, button.ghost, .settings {
-        color: var(--ink);
-        background: rgba(243, 240, 232, .045);
-        border-color: var(--line-strong);
-        box-shadow: none;
-      }
-      button:disabled { opacity: .42; cursor: not-allowed; transform: none; }
-
-      .hero {
-        text-align: center;
-        display: grid;
-        justify-items: center;
-        gap: 8px;
-      }
-      .eyebrow {
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: .28em;
-        font-size: clamp(10px, 1.2vw, 12px);
-        font-weight: 700;
-      }
-      h1 {
-        margin: 0;
-        max-width: 980px;
-        color: var(--ink);
-        font-family: "Instrument Serif", "Merriweather", Georgia, serif;
-        font-size: clamp(34px, 6.8vh, 72px);
-        line-height: .98;
-        letter-spacing: -.055em;
-        font-weight: 560;
-        text-wrap: balance;
-      }
-      .lead {
-        margin: 0;
-        max-width: 720px;
-        color: var(--muted);
-        font-size: clamp(13px, 1.7vh, 16px);
-        line-height: 1.45;
-        text-wrap: pretty;
-      }
-
-      .swap-shell {
-        min-height: 0;
-        display: grid;
-        grid-template-columns: minmax(430px, 1.08fr) minmax(310px, .72fr);
-        gap: clamp(14px, 2vw, 22px);
-        align-items: stretch;
-      }
-      .card {
-        min-height: 0;
-        border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.022));
-        border-radius: 26px;
-        padding: clamp(14px, 2vh, 18px);
-        box-shadow: var(--shadow);
-      }
-      .card[hidden] { display: none !important; }
-      .swap-card, .side { display: grid; min-height: 0; }
-      .swap-card { grid-template-rows: auto auto auto auto auto auto 1fr; gap: clamp(8px, 1.15vh, 12px); }
-      .side { grid-template-rows: minmax(0, 1fr) auto; gap: clamp(10px, 1.5vh, 14px); }
-      .card-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        min-height: 32px;
-      }
-      .card-title {
-        margin: 0;
-        font-size: 13px;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: .22em;
-        font-weight: 700;
-      }
-      .settings {
-        display: inline-grid;
-        place-items: center;
-        min-width: 38px;
-        min-height: 32px;
-        border-radius: 999px;
-        padding: 0 11px;
-        color: var(--accent);
-        font-size: 12px;
-        font-weight: 700;
-      }
-
-      .asset-panel {
-        background: var(--surface-2);
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        padding: clamp(12px, 1.6vh, 16px);
-      }
-      .asset-top, .amount-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-      }
-      .asset-top {
-        margin-bottom: 9px;
-        color: var(--dim);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: .18em;
-        font-weight: 700;
-      }
-      .token-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid var(--line-strong);
-        border-radius: 999px;
-        padding: 7px 10px;
-        color: var(--ink);
-        background: rgba(255,255,255,.035);
-        letter-spacing: .02em;
-        text-transform: none;
-      }
-      .coin {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        color: #090a0a;
-        background: var(--accent);
-        font-size: 11px;
-        font-weight: 700;
-      }
-      .eth { background: #b5b9c9; }
-      .zec { background: var(--accent); }
-      label {
-        display: block;
-        margin: 0 0 7px;
-        color: var(--dim);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: .18em;
-        font-weight: 700;
-      }
-      input {
-        width: 100%;
-        border: 0;
+        appearance: none;
+        border: 1px solid var(--color-line-strong);
         background: transparent;
-        color: var(--ink);
-        padding: 0;
-        font: 700 clamp(30px, 5.8vh, 54px)/1 "Roboto", "Cantarell", sans-serif;
-        letter-spacing: -.06em;
-        outline: none;
-      }
-      input::placeholder { color: rgba(243, 240, 232, .22); }
-      .subinput {
-        border: 1px solid var(--line);
-        background: #090b0b;
-        border-radius: 16px;
-        padding: 12px 13px;
-        font-size: 14px;
-        line-height: 1.15;
-        letter-spacing: 0;
-      }
-      .subinput:focus { border-color: rgba(215, 197, 138, .48); }
-      .flip {
-        width: 32px;
-        height: 32px;
-        display: grid;
-        place-items: center;
-        justify-self: center;
-        margin: -2px 0;
-        border-radius: 50%;
-        background: var(--bg);
-        border: 1px solid var(--line-strong);
-        color: var(--accent);
-        font-size: 15px;
-      }
-      .field-block { margin: 0; }
-      .inline-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
-      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      #status {
-        align-self: end;
-        min-height: 34px;
-        color: var(--muted);
-        line-height: 1.35;
-        font-size: 13px;
-      }
-      #status[data-tone="ok"] { color: var(--ok); }
-      #status[data-tone="error"] { color: var(--red); }
-
-      .details { display: grid; gap: 7px; }
-      .details div {
-        display: grid;
-        grid-template-columns: minmax(88px, .55fr) minmax(0, 1fr);
-        gap: 10px;
-        align-items: baseline;
-        border-bottom: 1px solid var(--line);
-        padding-bottom: 7px;
-      }
-      .details span {
-        color: var(--dim);
-        font-size: 10px;
+        min-height: 44px;
+        padding: var(--space-3) var(--space-4);
         text-transform: uppercase;
         letter-spacing: .16em;
-        font-weight: 700;
+        font-size: var(--text-small);
+        cursor: pointer;
       }
-      .details b { font-size: clamp(13px, 1.7vh, 16px); font-weight: 700; }
-      code {
-        color: var(--accent);
+
+      button:hover:not(:disabled),
+      button:focus-visible {
+        background: var(--color-text);
+        color: var(--color-bg);
+        outline: none;
+      }
+
+      button:disabled {
+        border-color: var(--color-faint);
+        color: var(--color-faint);
+        cursor: not-allowed;
+      }
+
+      a {
+        color: inherit;
         overflow-wrap: anywhere;
-        font-family: "Roboto", "Cantarell", ui-sans-serif, sans-serif;
-        font-size: 11px;
-      }
-      .note, .warn {
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.48;
-        font-size: clamp(12px, 1.65vh, 14px);
-      }
-      .warn {
-        border: 1px solid rgba(215, 197, 138, .16);
-        background: rgba(215, 197, 138, .055);
-        color: #d7d0bc;
-        padding: clamp(11px, 1.5vh, 14px);
-        border-radius: 18px;
-      }
-      .side .card {
-        display: grid;
-        align-content: start;
-        gap: 13px;
-      }
-      .side .card:not([hidden]) { min-height: 0; }
-      .how-title {
-        margin: 0;
-        font-family: "Instrument Serif", "Merriweather", Georgia, serif;
-        font-size: clamp(20px, 3.2vh, 30px);
-        line-height: 1.05;
-        letter-spacing: -.04em;
-        font-weight: 520;
-      }
-      .route-line {
-        min-height: 90px;
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        gap: 12px;
-      }
-      .route-node {
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        background: var(--surface-2);
-        padding: 13px;
-      }
-      .route-node strong { display: block; font-size: 22px; letter-spacing: -.04em; }
-      .route-node span { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .15em; }
-      .route-arrow { color: var(--accent); }
-      a { color: var(--accent); text-decoration-color: rgba(215, 197, 138, .35); }
-
-      .meta-row {
-        border-top: 1px solid var(--line);
-        padding-top: clamp(10px, 1.5vh, 14px);
-      }
-      .trust {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-        width: min(650px, 100%);
-      }
-      .trust-card { text-align: left; }
-      .trust-card strong {
-        display: block;
-        color: var(--ink);
-        font-size: clamp(16px, 2.4vh, 22px);
-        line-height: 1;
-        letter-spacing: -.04em;
-      }
-      .trust-card span {
-        color: var(--dim);
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .14em;
-      }
-      .source {
-        margin: 0;
-        color: var(--dim);
-        text-transform: uppercase;
-        letter-spacing: .18em;
-        font-size: 10px;
-        font-weight: 700;
-        white-space: nowrap;
+        text-decoration: underline;
+        text-underline-offset: .24em;
       }
 
-      @media (max-width: 900px) {
-        body { overflow: auto; }
-        main { height: auto; min-height: 100dvh; grid-template-rows: auto; }
-        .swap-shell { grid-template-columns: 1fr; }
-        .side { grid-template-rows: auto; }
-        .meta-row { align-items: flex-start; flex-direction: column; }
+      main {
+        width: min(var(--width-page), calc(100vw - (var(--space-5) * 2)));
+        min-height: 100dvh;
+        margin: 0 auto;
+        padding: var(--space-5) 0;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: var(--space-8);
       }
+
+      header,
+      footer {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-4);
+      }
+
+      .brand,
+      .meta,
+      label,
+      .label,
+      .section-title,
+      footer,
+      #status,
+      .details span {
+        color: var(--color-muted);
+        font-size: var(--text-small);
+        letter-spacing: .16em;
+        line-height: 1.35;
+        text-transform: uppercase;
+      }
+
+      .brand,
+      footer { color: var(--color-text); }
+
+      .brand { white-space: pre; }
+
+      h1.brand {
+        font: inherit;
+        letter-spacing: .16em;
+      }
+
+      #connect {
+        min-height: 44px;
+        padding: var(--space-2) 0 var(--space-2) var(--space-3);
+        border: 0;
+        color: var(--color-text);
+        text-align: right;
+        text-decoration: underline;
+        text-underline-offset: .24em;
+      }
+
+      #connect:hover,
+      #connect:focus-visible {
+        background: transparent;
+        color: var(--color-muted);
+        outline: 1px solid var(--color-line-strong);
+        outline-offset: var(--space-2);
+      }
+
+      .stack {
+        align-self: center;
+        display: grid;
+        gap: var(--space-7);
+        min-width: 0;
+      }
+
+      .swap-form,
+      #quote-card,
+      .route,
+      .privacy {
+        display: grid;
+        gap: var(--space-4);
+        min-width: 0;
+      }
+
+      h1,
+      h2,
+      p { margin: 0; }
+
+      .body-copy,
+      .route,
+      .privacy,
+      .note {
+        color: var(--color-muted);
+        font-size: var(--text-body);
+        letter-spacing: 0;
+        line-height: var(--leading-body);
+        text-transform: none;
+      }
+
+      .swap-form { gap: var(--space-5); }
+
+      .field {
+        display: grid;
+        gap: var(--space-2);
+        min-width: 0;
+      }
+
+      input {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        border-bottom: 1px solid var(--color-line-strong);
+        background: transparent;
+        padding: var(--space-2) 0 var(--space-3);
+        outline: none;
+      }
+
+      input::placeholder { color: var(--color-faint); }
+
+      input:focus { border-bottom-color: var(--color-text); }
+
+      #amount {
+        font-size: var(--text-large);
+        letter-spacing: -.08em;
+        line-height: var(--leading-tight);
+      }
+
+      .field-row {
+        display: grid;
+        gap: var(--space-5);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-3);
+      }
+
+      #status {
+        border-left: 1px solid var(--color-line);
+        padding-left: var(--space-3);
+        min-height: 1.35em;
+      }
+
+      #status[data-tone="ok"] {
+        border-left-color: var(--color-line-strong);
+        color: var(--color-text);
+      }
+
+      #status[data-tone="error"] {
+        border-left-color: var(--color-error);
+        color: var(--color-error);
+      }
+
+      #quote-card[hidden] { display: none !important; }
+
+      #quote-card {
+        border-top: 1px solid var(--color-line);
+        padding-top: var(--space-5);
+      }
+
+      .details {
+        display: grid;
+        gap: var(--space-3);
+        min-width: 0;
+      }
+
+      .details div {
+        display: grid;
+        grid-template-columns: 152px minmax(0, 1fr);
+        gap: var(--space-4);
+        align-items: baseline;
+        min-width: 0;
+        border-bottom: 1px solid var(--color-line);
+        padding-bottom: var(--space-3);
+      }
+
+      .details b,
+      .details code,
+      .note span {
+        color: var(--color-text);
+        font-size: var(--text-body);
+        font-weight: 400;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+        text-transform: none;
+      }
+
+      .route {
+        border-top: 1px solid var(--color-line);
+        padding-top: var(--space-5);
+      }
+
+      .privacy { color: var(--color-faint); }
+
+      footer {
+        border-top: 1px solid var(--color-line);
+        padding-top: var(--space-4);
+      }
+
       @media (max-width: 560px) {
-        main { width: min(100vw - 22px, 1180px); }
-        header { align-items: flex-start; }
-        .brand { letter-spacing: .1em; }
-        h1 { font-size: 36px; }
-        .amount-row, .actions, .trust { grid-template-columns: 1fr; }
-        .details div { grid-template-columns: 1fr; }
-      }
-      @media (max-height: 720px) and (min-width: 901px) {
-        main { gap: 10px; padding: 12px 0; }
-        h1 { font-size: clamp(32px, 5.8vh, 48px); }
-        .lead { display: none; }
-        .swap-card { gap: 8px; }
-        .asset-panel { padding: 12px; }
-        .warn { display: none; }
-        .route-line { min-height: 64px; }
-        .route-node strong { font-size: 18px; }
+        :root {
+          --space-5: 20px;
+          --space-7: 40px;
+          --space-8: 48px;
+          --text-large: clamp(44px, 18vw, 72px);
+        }
+
+        main { width: min(var(--width-page), calc(100vw - (var(--space-4) * 2))); }
+
+        header,
+        footer,
+        .field-row,
+        .details div {
+          grid-template-columns: 1fr;
+        }
+
+        header,
+        footer {
+          display: grid;
+          align-items: start;
+        }
+
+        #connect { text-align: left; }
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <div class="brand"><span class="mark" aria-hidden="true"></span><strong>ZeroBridge</strong><span>ETH → ZEC</span></div>
-        <button id="connect" class="secondary">Connect wallet</button>
+        <h1 class="brand">ZEROBRIDGE   ETH → ZEC</h1>
+        <button id="connect" type="button">CONNECT WALLET</button>
       </header>
 
-      <section class="hero">
-        <div class="eyebrow">Ethereum mainnet to native Zcash</div>
-        <h1>Swap ETH to ZEC in one clean move.</h1>
-      </section>
-
-      <section class="swap-shell">
-        <div class="card swap-card">
-          <div class="card-head">
-            <h2 class="card-title">Swap</h2>
-            <span class="settings" title="Default slippage; editable below">3%</span>
+      <section class="stack" aria-label="ETH to ZEC swap">
+        <form class="swap-form" onsubmit="return false;">
+          <div class="field">
+            <label for="amount">Amount</label>
+            <input id="amount" inputmode="decimal" placeholder="0.10" aria-describedby="amount-help" />
+            <p class="meta" id="amount-help">ETH mainnet input</p>
           </div>
 
-          <div class="asset-panel">
-            <div class="asset-top">
-              <span>You send</span>
-              <span class="token-pill"><span class="coin eth">E</span> ETH</span>
+          <div class="field-row">
+            <div class="field">
+              <label for="destination">Receive</label>
+              <input id="destination" placeholder="t1/t3, u1, or zs address" autocomplete="off" />
             </div>
-            <div class="amount-row">
-              <div>
-                <label for="amount">Amount</label>
-                <input id="amount" inputmode="decimal" placeholder="0.10" />
-              </div>
-              <span class="note">Ethereum mainnet</span>
-            </div>
-          </div>
-
-          <div class="flip">↓</div>
-
-          <div class="asset-panel">
-            <div class="asset-top">
-              <span>You receive</span>
-              <span class="token-pill"><span class="coin zec">Z</span> ZEC</span>
-            </div>
-            <label for="destination">Zcash recipient</label>
-            <input class="subinput" id="destination" placeholder="t1/t3, u1, or zs address" autocomplete="off" />
-          </div>
-
-          <div class="field-block inline-fields">
-            <div>
-              <label for="slippage">Max slippage</label>
-              <input class="subinput" id="slippage" inputmode="decimal" value="3" />
+            <div class="field">
+              <label for="slippage">Slippage</label>
+              <input id="slippage" inputmode="decimal" value="3" />
             </div>
           </div>
 
           <div class="actions">
-            <button id="quote" class="ghost">Get quote</button>
-            <button id="send" disabled>Swap now</button>
-          </div>
-          <div id="status"></div>
-          <div class="warn">Privacy note: use a fresh shielded or unified address. The destination is still included in the public Ethereum memo.</div>
-        </div>
-
-        <aside class="side">
-          <div class="card" id="quote-card" hidden>
-            <div class="card-head">
-              <h2 class="card-title">Quote details</h2>
-              <span class="token-pill">Live quote</span>
-            </div>
-            <div class="details" id="details"></div>
-            <p class="note">Submitted transaction: <span id="tx-hash">not sent yet</span></p>
+            <button id="quote" type="button">Get quote</button>
+            <button id="send" type="button" disabled>Swap now</button>
           </div>
 
-          <div class="card">
-            <h2 class="how-title">One route. No wrapper. No account.</h2>
-            <div class="route-line" aria-hidden="true">
-              <div class="route-node"><span>Send</span><strong>ETH</strong></div>
-              <div class="route-arrow">→</div>
-              <div class="route-node"><span>Receive</span><strong>ZEC</strong></div>
-            </div>
-            <p class="note">Maya observes your Ethereum vault payment, reads the memo, and signs the native ZEC outbound to your recipient address.</p>
-            <p class="note">ZeroBridge does not custody funds, store keys, or deploy a new contract.</p>
-          </div>
-        </aside>
+          <div id="status" role="status" aria-live="polite"></div>
+          <p class="privacy">Privacy note: use a fresh shielded or unified address. The destination is still included in the public Ethereum memo.</p>
+        </form>
+
+        <section class="route" aria-label="Route note">
+          <p>Quote ETH. Send one Ethereum mainnet transaction to the fresh Maya inbound vault. Receive native ZEC at the address above after settlement. ZeroBridge deploys no contract.</p>
+        </section>
+
+        <section id="quote-card" hidden aria-labelledby="quote-title">
+          <h2 class="section-title" id="quote-title">Quote details</h2>
+          <div class="details" id="details"></div>
+          <p class="note">Submitted transaction: <span id="tx-hash">not sent yet</span></p>
+        </section>
       </section>
 
-      <section class="meta-row" aria-label="Trust summary">
-        <div class="trust">
-          <div class="trust-card"><strong>1 tx</strong><span>from ETH wallet</span></div>
-          <div class="trust-card"><strong>0 custody</strong><span>self-custodial flow</span></div>
-          <div class="trust-card"><strong>ZEC</strong><span>native receive</span></div>
-        </div>
-        <p class="source">Built by <a href="https://x.com/megabyte0x" target="_blank" rel="noreferrer">megabyte0x</a></p>
-      </section>
+      <footer>
+        <div>1 TX · 0 CUSTODY · NATIVE ZEC RECEIVE</div>
+        <div>BUILT BY MEGABYTE0X</div>
+      </footer>
     </main>
     <script type="module" src="/src/app.js"></script>
   </body>
