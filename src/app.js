@@ -53,7 +53,6 @@ import {
  * @property {HTMLElement} status
  * @property {HTMLElement} quoteCard
  * @property {HTMLElement} details
- * @property {HTMLElement} txHash
  */
 
 /** @param {string} id @returns {HTMLElement} */
@@ -73,7 +72,6 @@ const els = {
   status: $('status'),
   quoteCard: $('quote-card'),
   details: $('details'),
-  txHash: $('tx-hash'),
 };
 
 /**
@@ -130,6 +128,26 @@ function startExpiryCountdown(expiryMs) {
   };
   update();
   state.expiryTimer = window.setInterval(update, 1000);
+}
+
+/**
+ * @param {string} label
+ * @param {Node|string} value
+ * @param {'b'|'code'} [valueTag]
+ * @returns {HTMLDivElement}
+ */
+function quoteDetailRow(label, value, valueTag = 'b') {
+  const row = document.createElement('div');
+  const labelEl = document.createElement('span');
+  const valueEl = document.createElement(valueTag);
+  labelEl.textContent = label;
+  if (typeof value === 'string') {
+    valueEl.textContent = value;
+    row.append(labelEl, valueEl);
+  } else {
+    row.append(labelEl, value);
+  }
+  return row;
 }
 
 /** @param {boolean} isBusy */
@@ -214,16 +232,16 @@ function renderQuote(quote) {
   const outbound = formatMayaAmount(quote.fees?.outbound ?? 0);
   const total = formatMayaAmount(quote.fees?.total ?? 0);
   const expiryMs = Number(quote.expiry) * 1000;
-  els.details.innerHTML = `
-    <div><span>Expected ZEC</span><b>${expected} ZEC</b></div>
-    <div><span>Total fees</span><b>${total} ZEC</b></div>
-    <div><span>ZEC outbound fee</span><b>${outbound} ZEC</b></div>
-    <div><span>Estimated time</span><b>${secondsLabel(quote.total_swap_seconds)}</b></div>
-    <div><span>Inbound vault</span><code>${quote.inbound_address}</code></div>
-    <div><span>Memo</span><code>${quote.memo}</code></div>
-    <div><span>Expires</span><b id="quote-expiry"></b></div>
-    <div><span>Submitted tx</span><b id="tx-hash">not sent yet</b></div>
-  `;
+  els.details.replaceChildren(
+    quoteDetailRow('Expected ZEC', `${expected} ZEC`),
+    quoteDetailRow('Total fees', `${total} ZEC`),
+    quoteDetailRow('ZEC outbound fee', `${outbound} ZEC`),
+    quoteDetailRow('Estimated time', secondsLabel(quote.total_swap_seconds)),
+    quoteDetailRow('Inbound vault', quote.inbound_address, 'code'),
+    quoteDetailRow('Memo', quote.memo, 'code'),
+    quoteDetailRow('Expires', Object.assign(document.createElement('b'), { id: 'quote-expiry' })),
+    quoteDetailRow('Submitted tx', Object.assign(document.createElement('b'), { id: 'tx-hash', textContent: 'not sent yet' })),
+  );
   els.quoteCard.hidden = false;
   startExpiryCountdown(expiryMs);
 }
@@ -240,7 +258,12 @@ async function sendSwap() {
     const tx = buildEthTransferTx(quote, form.amount);
     setStatus('Confirm the ETH mainnet transaction in your wallet.');
     const hash = await requireEthereum().request({ method: 'eth_sendTransaction', params: [{ from: state.account, ...tx }] });
-    $('tx-hash').innerHTML = `<a href="https://xscanner.org/transaction/${hash}" target="_blank" rel="noreferrer">${hash}</a>`;
+    const link = document.createElement('a');
+    link.href = `https://xscanner.org/transaction/${encodeURIComponent(String(hash))}`;
+    link.target = '_blank';
+    link.rel = 'noreferrer';
+    link.textContent = String(hash);
+    $('tx-hash').replaceChildren(link);
     setStatus('Swap submitted. Track the transaction on XScanner; Maya will settle native ZEC to your recipient address.', 'ok');
   } catch (error) {
     setStatus(errorMessage(error), 'error');
