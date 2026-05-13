@@ -23,13 +23,12 @@
         --space-6: 32px;
         --space-7: 48px;
         --space-8: 64px;
-        --width-page: 640px;
+        --width-page: 960px;
+        --width-quote: 280px;
         --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --text-body: 14px;
         --text-small: 11px;
-        --text-large: clamp(52px, 15vw, 112px);
         --leading-body: 1.55;
-        --leading-tight: .9;
         background: var(--color-bg);
         color: var(--color-text);
         font-family: var(--font-mono);
@@ -154,10 +153,12 @@
       .stack {
         align-self: center;
         display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(var(--width-quote), .8fr);
         gap: var(--space-7);
         min-width: 0;
       }
 
+      .swap-column,
       .swap-form,
       #quote-card,
       .route,
@@ -204,12 +205,6 @@
 
       input:focus { border-bottom-color: var(--color-text); }
 
-      #amount {
-        font-size: var(--text-large);
-        letter-spacing: -.08em;
-        line-height: var(--leading-tight);
-      }
-
       .field-row {
         display: grid;
         gap: var(--space-5);
@@ -242,6 +237,7 @@
       #quote-card {
         border-top: 1px solid var(--color-line);
         padding-top: var(--space-5);
+        align-self: start;
       }
 
       .details {
@@ -288,7 +284,6 @@
           --space-5: 20px;
           --space-7: 40px;
           --space-8: 48px;
-          --text-large: clamp(44px, 18vw, 72px);
         }
 
         main { width: min(var(--width-page), calc(100vw - (var(--space-4) * 2))); }
@@ -308,6 +303,10 @@
 
         #connect { text-align: left; }
       }
+
+      @media (max-width: 760px) {
+        .stack { grid-template-columns: 1fr; }
+      }
     </style>
   </head>
   <body>
@@ -318,36 +317,38 @@
       </header>
 
       <section class="stack" aria-label="ETH to ZEC swap">
-        <form class="swap-form" onsubmit="return false;">
-          <div class="field">
-            <label for="amount">Amount</label>
-            <input id="amount" inputmode="decimal" placeholder="0.10" aria-describedby="amount-help" />
-            <p class="meta" id="amount-help">ETH mainnet input</p>
-          </div>
-
-          <div class="field-row">
+        <div class="swap-column">
+          <form class="swap-form" onsubmit="return false;">
             <div class="field">
-              <label for="destination">Receive</label>
-              <input id="destination" placeholder="t1/t3, u1, or zs address" autocomplete="off" />
+              <label for="amount">Amount</label>
+              <input id="amount" inputmode="decimal" placeholder="0.10" aria-describedby="amount-help" />
+              <p class="meta" id="amount-help">ETH mainnet input</p>
             </div>
-            <div class="field">
-              <label for="slippage">Slippage</label>
-              <input id="slippage" inputmode="decimal" value="3" />
+
+            <div class="field-row">
+              <div class="field">
+                <label for="destination">Receive</label>
+                <input id="destination" placeholder="t1/t3, u1, or zs address" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="slippage">Slippage</label>
+                <input id="slippage" inputmode="decimal" value="3" />
+              </div>
             </div>
-          </div>
 
-          <div class="actions">
-            <button id="quote" type="button">Get quote</button>
-            <button id="send" type="button" disabled>Swap now</button>
-          </div>
+            <div class="actions">
+              <button id="quote" type="button">Get quote</button>
+              <button id="send" type="button" disabled>Swap now</button>
+            </div>
 
-          <div id="status" role="status" aria-live="polite"></div>
-          <p class="privacy">Privacy note: use a fresh shielded or unified address. The destination is still included in the public Ethereum memo.</p>
-        </form>
+            <div id="status" role="status" aria-live="polite"></div>
+            <p class="privacy">Privacy note: use a fresh shielded or unified address. The destination is still included in the public Ethereum memo.</p>
+          </form>
 
-        <section class="route" aria-label="Route note">
-          <p>Quote ETH. Send one Ethereum mainnet transaction to the fresh Maya inbound vault. Receive native ZEC at the address above after settlement. ZeroBridge deploys no contract.</p>
-        </section>
+          <section class="route" aria-label="Route note">
+            <p>Quote ETH. Send one Ethereum mainnet transaction to the fresh Maya inbound vault. Receive native ZEC at the address above after settlement. ZeroBridge deploys no contract.</p>
+          </section>
+        </div>
 
         <section id="quote-card" hidden aria-labelledby="quote-title">
           <h2 class="section-title" id="quote-title">Quote details</h2>
