@@ -10,7 +10,7 @@ test('keeps the browser app DOM contract intact', () => {
     assert.equal(html.match(new RegExp(`id="${id}"`, 'g'))?.length, 1);
   }
 
-  assert.match(html, /<script type="module" src="\/src\/app\.js(?:\?v=[^"]+)?"><\/script>/);
+  assert.match(html, /<script type="module" src="\/src\/app\.js\?v=zec-header-20260513"><\/script>/);
 });
 
 test('keeps live USD pricing wired to the static DOM contract', () => {
