@@ -10,7 +10,7 @@ test('keeps the browser app DOM contract intact', () => {
     assert.equal(html.match(new RegExp(`id="${id}"`, 'g'))?.length, 1);
   }
 
-  assert.match(html, /<script type="module" src="\/src\/app\.js\?v=eth-usdc-mainnet-20260513"><\/script>/);
+  assert.match(html, /<script type="module" src="\/src\/app\.js\?v=github-footer-20260516"><\/script>/);
 });
 
 test('keeps live USD pricing wired to the static DOM contract', () => {
@@ -52,6 +52,9 @@ test('uses the strict minimal static UI treatment', () => {
   assert.match(html, />↓<\/div>/);
   assert.match(html, /1 TX · 0 CUSTODY · NATIVE ZEC RECEIVE/);
   assert.match(html, /BUILT BY MEGABYTE0X/);
+  assert.match(html, /href="https:\/\/github\.com\/agent-cortex\/eth-zec-bridge"/);
+  assert.match(html, /aria-label="ZeroBridge source on GitHub"/);
+  assert.match(html, />GITHUB<\/span>/);
   assert.match(html, /ZeroBridge deploys no contract\./);
   assert.doesNotMatch(html, /grid-template-columns: minmax\(0, 1fr\) 104px/i);
 });
