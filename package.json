@@ -10,6 +10,15 @@
     "build": "rm -rf dist && mkdir -p dist && cp index.html dist/ && cp -r src dist/src && cp README.md dist/",
     "serve": "python3 -m http.server 4174 --bind 127.0.0.1 --directory dist"
   },
-  "keywords": ["ethereum", "zcash", "maya-protocol", "bridge", "swap"],
-  "license": "MIT"
+  "keywords": [
+    "ethereum",
+    "zcash",
+    "maya-protocol",
+    "bridge",
+    "swap"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
 }
