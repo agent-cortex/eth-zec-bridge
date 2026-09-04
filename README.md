@@ -17,9 +17,9 @@ No custom Solidity is used. Ethereum and Maya's existing vault/router protocol h
 ## Run locally
 
 ```bash
-npm test
-npm run build
-npm run serve
+pnpm test
+pnpm run build
+pnpm run serve
 ```
 
 Open `http://127.0.0.1:4174`.
