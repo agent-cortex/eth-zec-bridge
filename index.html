@@ -4,17 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZeroBridge | ETH → ZEC Swap</title>
-    <meta name="description" content="Swap Ethereum mainnet ETH to native ZEC in the browser using Maya Protocol." />
+    <meta name="description" content="Swap Ethereum mainnet ETH or USDC to native ZEC in the browser using Maya Protocol." />
     <style>
       :root {
-        color-scheme: dark;
-        --color-bg: #030303;
-        --color-text: #eeeeee;
-        --color-muted: #8c8c8c;
-        --color-faint: #4a4a4a;
-        --color-line: #2a2a2a;
-        --color-line-strong: #cfcfcf;
-        --color-error: #b8b8b8;
+        color-scheme: light;
+        --color-bg: #f6fff6;
+        --color-text: #000000;
+        --color-muted: #666666;
+        --color-faint: #999999;
+        --color-line: #ddebdd;
+        --color-line-strong: #000000;
+        --color-surface: #ffffff;
+        --color-surface-subtle: #eeeeee;
+        --color-accent: #00e100;
+        --color-accent-soft: rgba(0, 225, 0, .16);
+        --color-error: #e04545;
         --space-1: 4px;
         --space-2: 8px;
         --space-3: 12px;
@@ -22,115 +26,87 @@
         --space-5: 24px;
         --space-6: 32px;
         --space-7: 48px;
-        --space-8: 64px;
-        --width-page: 960px;
-        --width-quote: 280px;
-        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        --text-body: 14px;
-        --text-small: 11px;
-        --leading-body: 1.55;
+        --space-8: 72px;
+        --width-page: 1180px;
+        --width-quote: 360px;
+        --font-sans: "Paradigm Serif", Georgia, "Times New Roman", serif;
+        --font-mono: "Paradigm SemiMono", "Atlas Typewriter", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        --text-body: 16px;
+        --text-small: 12px;
+        --leading-body: 1.45;
         background: var(--color-bg);
         color: var(--color-text);
-        font-family: var(--font-mono);
-        font-size: var(--text-body);
       }
 
       * { box-sizing: border-box; }
-
-      html { min-width: 0; }
-
+      [hidden] { display: none !important; }
+      html { min-width: 0; background: var(--color-bg); }
       body {
         margin: 0;
         min-width: 0;
         min-height: 100dvh;
         background: var(--color-bg);
         color: var(--color-text);
-        font-family: var(--font-mono);
+        font-family: var(--font-sans);
         font-size: var(--text-body);
         line-height: var(--leading-body);
       }
 
       body, button, input, textarea, code { font-family: var(--font-mono); }
-
-      button, input, textarea, select {
-        color: inherit;
-        font: inherit;
-      }
-
-      button {
-        appearance: none;
-        border: 1px solid var(--color-line-strong);
-        background: transparent;
-        min-height: 44px;
-        padding: var(--space-3) var(--space-4);
-        text-transform: uppercase;
-        letter-spacing: .16em;
-        font-size: var(--text-small);
-        cursor: pointer;
-      }
-
-      button:hover:not(:disabled),
-      button:focus-visible {
-        background: var(--color-text);
-        color: var(--color-bg);
-        outline: none;
-      }
-
-      button:disabled {
-        border-color: var(--color-faint);
-        color: var(--color-faint);
-        cursor: not-allowed;
-      }
-
-      a {
-        color: inherit;
-        overflow-wrap: anywhere;
-        text-decoration: underline;
-        text-underline-offset: .24em;
-      }
+      button, input, textarea, select { color: inherit; font: inherit; }
+      h1, h2, p, fieldset { margin: 0; }
 
       main {
-        width: min(var(--width-page), calc(100vw - (var(--space-5) * 2)));
+        width: min(var(--width-page), calc(100vw - 48px));
         min-height: 100dvh;
         margin: 0 auto;
         padding: var(--space-5) 0;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
-        gap: var(--space-5);
+        gap: var(--space-6);
       }
 
       header,
       footer {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
         gap: var(--space-4);
       }
 
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: var(--space-3) 0;
+        background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+        border-bottom: 1px solid var(--color-line);
+        backdrop-filter: blur(16px);
+      }
+
       .brand,
+      .kicker,
       .meta,
       .header-price,
       label,
       .label,
       .section-title,
       footer,
-      .details span {
+      .details span,
+      button {
         color: var(--color-muted);
+        font-family: var(--font-mono);
         font-size: var(--text-small);
-        letter-spacing: .16em;
-        line-height: 1.35;
+        font-weight: 400;
+        letter-spacing: .04em;
+        line-height: 1.25;
         text-transform: uppercase;
       }
 
       .brand,
       footer { color: var(--color-text); }
-
       .brand { white-space: pre; }
-
-      h1.brand {
-        font: inherit;
-        letter-spacing: .16em;
-      }
+      h1.brand { font: inherit; letter-spacing: .04em; }
 
       .header-price {
         flex: 1 1 auto;
@@ -138,33 +114,60 @@
         white-space: nowrap;
       }
 
-      .header-price[hidden] { display: none !important; }
+      a {
+        color: inherit;
+        overflow-wrap: anywhere;
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: .28em;
+      }
+
+      button {
+        appearance: none;
+        min-height: 46px;
+        border: 1px solid var(--color-line-strong);
+        background: transparent;
+        padding: var(--space-3) var(--space-5);
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+      }
+
+      button:hover:not(:disabled),
+      button:focus-visible {
+        background: var(--color-text);
+        color: var(--color-bg);
+        outline: none;
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        border-color: var(--color-line);
+        color: var(--color-faint);
+        cursor: not-allowed;
+      }
 
       #connect {
-        min-height: 44px;
-        padding: var(--space-2) 0 var(--space-2) var(--space-3);
-        border: 0;
+        min-height: 38px;
+        padding: var(--space-2) var(--space-4);
+        border-color: var(--color-line);
+        background: var(--color-surface);
         color: var(--color-text);
-        text-align: right;
-        text-decoration: underline;
-        text-underline-offset: .24em;
       }
 
       #connect:hover,
       #connect:focus-visible {
-        background: transparent;
-        color: var(--color-muted);
-        outline: 1px solid var(--color-line-strong);
-        outline-offset: var(--space-2);
+        background: var(--color-accent);
+        color: var(--color-text);
+        border-color: var(--color-text);
       }
 
       .stack {
         align-self: center;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(var(--width-quote), .8fr);
-        gap: var(--space-7);
+        grid-template-columns: minmax(0, 1fr) minmax(var(--width-quote), .55fr);
+        gap: var(--space-8);
         min-width: 0;
-        padding: var(--space-6) 0;
+        padding: var(--space-6) 0 var(--space-7);
       }
 
       .swap-column,
@@ -177,10 +180,29 @@
         min-width: 0;
       }
 
-      h1,
-      h2,
-      p { margin: 0; }
+      .hero {
+        display: grid;
+        gap: var(--space-4);
+        max-width: 780px;
+        padding-bottom: var(--space-6);
+      }
 
+      .hero-title {
+        max-width: 760px;
+        font-family: var(--font-sans);
+        font-size: clamp(48px, 8vw, 118px);
+        font-weight: 400;
+        letter-spacing: -.055em;
+        line-height: .88;
+        text-wrap: balance;
+      }
+
+      .hero-title span {
+        color: var(--color-accent);
+        font-style: italic;
+      }
+
+      .hero-copy,
       .body-copy,
       .route,
       .privacy,
@@ -188,19 +210,16 @@
       .details small,
       .note {
         color: var(--color-muted);
+        font-family: var(--font-sans);
         font-size: var(--text-body);
         letter-spacing: 0;
         line-height: var(--leading-body);
         text-transform: none;
       }
 
+      .hero-copy { max-width: 590px; font-size: clamp(18px, 2vw, 25px); }
       .swap-form { gap: var(--space-5); }
-
-      .field {
-        display: grid;
-        gap: var(--space-2);
-        min-width: 0;
-      }
+      .field { display: grid; gap: var(--space-2); min-width: 0; }
 
       input,
       textarea,
@@ -208,7 +227,7 @@
         width: 100%;
         min-width: 0;
         border: 0;
-        border-bottom: 1px solid var(--color-line);
+        border-bottom: 1px solid var(--color-line-strong);
         background: transparent;
         padding: var(--space-2) 0 var(--space-3);
         outline: none;
@@ -225,24 +244,14 @@
 
       input::placeholder,
       textarea::placeholder { color: var(--color-faint); }
-
-      select {
-        cursor: pointer;
-        text-transform: uppercase;
-      }
-
-      select option {
-        background: var(--color-bg);
-        color: var(--color-text);
-      }
-
-      input:focus,
-      textarea:focus,
-      select:focus { border-bottom-color: var(--color-text); }
+      select { cursor: pointer; text-transform: uppercase; }
+      select option { background: var(--color-bg); color: var(--color-text); }
+      input:focus, textarea:focus, select:focus { border-bottom-color: var(--color-accent); }
 
       .subvalue,
       .details small {
         color: var(--color-muted);
+        font-family: var(--font-mono);
         font-size: var(--text-small);
         font-weight: 400;
         letter-spacing: 0;
@@ -250,27 +259,25 @@
         text-transform: none;
       }
 
-      .subvalue[hidden] { display: none !important; }
-
-      .details small {
-        display: block;
-        margin-top: var(--space-1);
-      }
+      .details small { display: block; margin-top: var(--space-1); }
 
       .flow {
-        color: var(--color-muted);
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--color-line);
+        color: var(--color-text);
+        background: var(--color-surface);
+        font-family: var(--font-mono);
         line-height: 1;
       }
 
       .field-row,
+      .asset-grid { display: grid; gap: var(--space-5); }
       .asset-grid {
-        display: grid;
-        gap: var(--space-5);
-      }
-
-      .asset-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        border-top: 1px solid var(--color-line);
+        grid-template-columns: .8fr 1fr;
+        border-top: 1px solid var(--color-line-strong);
         padding-top: var(--space-5);
       }
 
@@ -290,12 +297,17 @@
       }
 
       .asset-option {
-        border: 1px solid var(--color-line);
-        cursor: pointer;
-        display: grid;
-        gap: var(--space-2);
+        position: relative;
         min-width: 0;
-        padding: var(--space-3);
+        min-height: 116px;
+        display: grid;
+        align-content: space-between;
+        gap: var(--space-3);
+        border: 1px solid var(--color-line);
+        background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+        padding: var(--space-4);
+        cursor: pointer;
+        transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
       }
 
       .asset-option input {
@@ -306,78 +318,55 @@
 
       .asset-option:has(input:checked),
       .asset-option:focus-within {
-        border-color: var(--color-line-strong);
+        border-color: var(--color-text);
+        background: var(--color-accent-soft);
       }
 
-      .asset-main {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-      }
+      .asset-option:hover { transform: translateY(-1px); border-color: var(--color-text); }
+      .asset-main { display: flex; align-items: center; gap: var(--space-2); }
+      .asset-logo { display: block; flex: 0 0 auto; height: 22px; object-fit: cover; width: 22px; }
+      .asset-copy { color: var(--color-muted); font-family: var(--font-mono); font-size: var(--text-small); letter-spacing: 0; line-height: 1.35; text-transform: none; }
 
-      .asset-logo {
-        display: block;
-        flex: 0 0 auto;
-        height: 22px;
-        object-fit: cover;
-        width: 22px;
-      }
-
-      .asset-copy {
-        color: var(--color-muted);
-        font-size: var(--text-small);
-        letter-spacing: 0;
-        line-height: 1.35;
-        text-transform: none;
-      }
-
-      .actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-3);
-      }
+      .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+      #quote { background: var(--color-text); color: var(--color-bg); }
+      #quote:hover:not(:disabled), #quote:focus-visible { background: var(--color-accent); color: var(--color-text); }
 
       #status {
         min-height: 1.35em;
         color: var(--color-muted);
+        font-family: var(--font-sans);
         font-size: var(--text-body);
         letter-spacing: 0;
         line-height: var(--leading-body);
         text-transform: none;
       }
-
       #status[data-tone="ok"] { color: var(--color-muted); }
-
       #status[data-tone="error"] { color: var(--color-error); }
 
-      #quote-card[hidden] { display: none !important; }
-
       #quote-card {
-        border-top: 1px solid var(--color-line);
-        padding-top: var(--space-5);
         align-self: start;
+        border: 1px solid var(--color-line-strong);
+        background: var(--color-surface);
+        padding: var(--space-5);
       }
 
-      .details {
-        display: grid;
-        gap: var(--space-3);
-        min-width: 0;
-      }
-
+      .details { display: grid; gap: var(--space-3); min-width: 0; }
       .details div {
         display: grid;
-        grid-template-columns: 152px minmax(0, 1fr);
+        grid-template-columns: 140px minmax(0, 1fr);
         gap: var(--space-4);
         align-items: baseline;
         min-width: 0;
         border-bottom: 1px solid var(--color-line);
         padding-bottom: var(--space-3);
       }
+      .details div:last-child { border-bottom: 0; padding-bottom: 0; }
 
       .details b,
       .details code,
       .note span {
         color: var(--color-text);
+        font-family: var(--font-mono);
         font-size: var(--text-body);
         font-weight: 400;
         letter-spacing: 0;
@@ -386,69 +375,31 @@
       }
 
       .route {
-        border-top: 1px solid var(--color-line);
+        border-top: 1px solid var(--color-line-strong);
         padding-top: var(--space-5);
       }
-
-      .privacy { color: var(--color-faint); }
+      .privacy { color: var(--color-muted); }
 
       footer {
-        border-top: 1px solid var(--color-line);
+        border-top: 1px solid var(--color-line-strong);
         padding-top: var(--space-4);
       }
+      .footer-links { display: flex; align-items: center; gap: var(--space-3); }
+      .github-link { display: inline-flex; align-items: center; gap: var(--space-2); }
+      .github-link svg { width: 14px; height: 14px; flex: 0 0 auto; fill: currentColor; }
 
-      .footer-links {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-      }
-
-      .github-link {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-      }
-
-      .github-link svg {
-        width: 14px;
-        height: 14px;
-        flex: 0 0 auto;
-        fill: currentColor;
+      @media (max-width: 860px) {
+        main { width: min(var(--width-page), calc(100vw - 32px)); }
+        .stack { grid-template-columns: 1fr; gap: var(--space-6); padding-top: var(--space-4); }
+        .hero { padding-bottom: var(--space-4); }
       }
 
       @media (max-width: 560px) {
-        :root {
-          --space-5: 20px;
-          --space-7: 40px;
-          --space-8: 48px;
-        }
-
-        main { width: min(var(--width-page), calc(100vw - (var(--space-4) * 2))); }
-
-        .stack { padding: var(--space-4) 0; }
-
-        header,
-        footer,
-        .field-row,
-        .asset-grid,
-        .asset-options,
-        .details div {
-          grid-template-columns: 1fr;
-        }
-
-        header,
-        footer {
-          display: grid;
-          align-items: start;
-        }
-
-        #connect { text-align: left; }
-
-        .header-price { text-align: left; }
-      }
-
-      @media (max-width: 760px) {
-        .stack { grid-template-columns: 1fr; }
+        :root { --space-5: 20px; --space-7: 40px; --space-8: 48px; }
+        header, footer, .field-row, .asset-grid, .asset-options, .details div { grid-template-columns: 1fr; }
+        header, footer { display: grid; align-items: start; }
+        #connect, .header-price { text-align: left; }
+        .actions { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -462,6 +413,12 @@
 
       <section class="stack" aria-label="ETH to ZEC swap">
         <div class="swap-column">
+          <section class="hero" aria-labelledby="hero-title">
+            <div class="kicker">Maya Protocol route · native ZEC settlement</div>
+            <h2 class="hero-title" id="hero-title">Ethereum liquidity into <span>private money.</span></h2>
+            <p class="hero-copy">Swap ETH or USDC on Ethereum mainnet to native ZEC. No wrapped token. No custodial account. A fresh quote is pulled before every wallet send.</p>
+          </section>
+
           <form class="swap-form" onsubmit="return false;">
             <div class="asset-grid" aria-label="Source selection">
               <div class="field">
@@ -477,11 +434,11 @@
                     <span class="asset-main">
                       <svg class="asset-logo" viewBox="0 0 256 417" role="img" aria-label="Ethereum logo">
                         <path fill="#8c8c8c" d="M127.9 0L125.1 9.5v275.3l2.8 2.8 127.9-75.6z" />
-                        <path fill="#eeeeee" d="M127.9 0L0 212l127.9 75.6V154.1z" />
-                        <path fill="#6f6f6f" d="M127.9 311.8l-1.6 2v98.1l1.6 4.6L256 236.2z" />
-                        <path fill="#cfcfcf" d="M127.9 416.5v-104.7L0 236.2z" />
-                        <path fill="#5f5f5f" d="M127.9 287.6l127.9-75.6-127.9-57.9z" />
-                        <path fill="#a8a8a8" d="M0 212l127.9 75.6V154.1z" />
+                        <path fill="#000000" d="M127.9 0L0 212l127.9 75.6V154.1z" />
+                        <path fill="#666666" d="M127.9 311.8l-1.6 2v98.1l1.6 4.6L256 236.2z" />
+                        <path fill="#333333" d="M127.9 416.5v-104.7L0 236.2z" />
+                        <path fill="#999999" d="M127.9 287.6l127.9-75.6-127.9-57.9z" />
+                        <path fill="#cccccc" d="M0 212l127.9 75.6V154.1z" />
                       </svg>
                       <b>ETH</b>
                     </span>
