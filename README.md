@@ -10,6 +10,10 @@ It uses Maya Protocol directly:
 
 No custom Solidity is used. Ethereum and Maya's existing vault/router protocol handle the onchain value movement; this repo is only the browser UI.
 
+## Contributor
+
+- [@megabyte0x](https://github.com/megabyte0x)
+
 ## Run locally
 
 ```bash
