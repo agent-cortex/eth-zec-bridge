@@ -1,5 +1,6 @@
 export const ZEC_ASSET = 'ZEC.ZEC';
 export const MAYA_QUOTE_ENDPOINT = 'https://mayanode.mayachain.info/mayachain/quote/swap';
+export const MAYA_INBOUND_ENDPOINT = 'https://mayanode.mayachain.info/mayachain/inbound_addresses';
 
 export const SOURCE_ASSETS = {
   'ethereum:ETH': {
@@ -114,6 +115,28 @@ const TRANSPARENT_ZEC_ADDRESS_RE = /^t[13][1-9A-HJ-NP-Za-km-z]{30,}$/;
 const UNIFIED_ZEC_ADDRESS_RE = /^u1[a-z0-9]{40,}$/i;
 const SAPLING_ZEC_ADDRESS_RE = /^zs[a-z0-9]{40,}$/i;
 const ADDRESS_WORD_RE = /^0x[0-9a-fA-F]{40}$/;
+
+export class TradingHaltedError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ chains?: string[], statuses?: MayaInboundAddress[] }} [details]
+   */
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'TradingHaltedError';
+    this.chains = details.chains || [];
+    this.statuses = details.statuses || [];
+  }
+}
+
+/**
+ * @typedef {object} MayaInboundAddress
+ * @property {string} chain
+ * @property {boolean} [halted]
+ * @property {boolean} [chain_trading_paused]
+ * @property {boolean} [global_trading_paused]
+ * @property {boolean} [chain_lp_actions_paused]
+ */
 
 /** @param {SourceAssetKey|undefined|null} sourceAssetKey @returns {SourceAsset} */
 export function getSourceAsset(sourceAssetKey = DEFAULT_SOURCE_ASSET_KEY) {
@@ -270,6 +293,66 @@ export function quoteUrl({ amount, destination, sourceAssetKey = DEFAULT_SOURCE_
   return url;
 }
 
+/** @param {unknown} value @returns {boolean} */
+function isPaused(value) {
+  return value === true || value === 1 || value === '1' || value === 'true';
+}
+
+/** @param {unknown} error @returns {boolean} */
+export function isTradingHaltError(error) {
+  return error instanceof TradingHaltedError || /trading\s+(is\s+)?halted|trading halted|chain_trading_paused/i.test(String(error?.message || error || ''));
+}
+
+/** @param {string[]} chains @returns {string} */
+function haltedRouteMessage(chains) {
+  const label = chains.length ? chains.join(' + ') : 'this route';
+  return `Maya has trading halted for ${label}. Do not send funds; retry after Maya reopens the route.`;
+}
+
+/** @returns {Promise<MayaInboundAddress[]>} */
+export async function fetchMayaInboundAddresses() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(MAYA_INBOUND_ENDPOINT, { signal: controller.signal });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Inbound status failed with HTTP ${response.status}`);
+    if (!Array.isArray(data)) throw new Error('Inbound status returned an unexpected response.');
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('Inbound status timed out. Maya may be slow; try again in a moment.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * @param {MayaInboundAddress[]} statuses
+ * @param {SourceAssetKey} [sourceAssetKey]
+ * @returns {MayaInboundAddress[]}
+ */
+export function haltedRouteStatuses(statuses, sourceAssetKey = DEFAULT_SOURCE_ASSET_KEY) {
+  const sourceAsset = getSourceAsset(sourceAssetKey);
+  const needed = new Set([sourceAsset.mayaAsset.split('.')[0], ZEC_ASSET.split('.')[0]]);
+  return statuses.filter((status) => needed.has(status.chain) && (
+    isPaused(status.halted) || isPaused(status.chain_trading_paused) || isPaused(status.global_trading_paused)
+  ));
+}
+
+/**
+ * @param {SourceAssetKey} [sourceAssetKey]
+ * @returns {Promise<MayaInboundAddress[]>}
+ */
+export async function assertRouteTradingOpen(sourceAssetKey = DEFAULT_SOURCE_ASSET_KEY) {
+  const statuses = await fetchMayaInboundAddresses();
+  const halted = haltedRouteStatuses(statuses, sourceAssetKey);
+  if (halted.length) {
+    throw new TradingHaltedError(haltedRouteMessage(halted.map((status) => status.chain)), { chains: halted.map((status) => status.chain), statuses: halted });
+  }
+  return statuses;
+}
+
 /**
  * @param {MayaIntegerField|bigint|null|undefined} seconds Duration in seconds.
  * @returns {string}
@@ -300,7 +383,11 @@ export async function fetchMayaQuote({ amount, destination, sourceAssetKey = DEF
   try {
     const response = await fetch(quoteUrl({ amount, destination, sourceAssetKey, fromAddress, toleranceBps }), { signal: controller.signal });
     const data = await response.json();
-    if (!response.ok || data.error) throw new Error(data.error || `Quote failed with HTTP ${response.status}`);
+    if (!response.ok || data.error) {
+      const message = data.error || `Quote failed with HTTP ${response.status}`;
+      if (isTradingHaltError(message)) throw new TradingHaltedError(haltedRouteMessage([]));
+      throw new Error(message);
+    }
     return data;
   } catch (error) {
     if (error?.name === 'AbortError') throw new Error('Quote timed out. Maya may be slow; try again in a moment.');

@@ -1,5 +1,6 @@
 import {
   DEFAULT_SOURCE_ASSET_KEY,
+  assertRouteTradingOpen,
   buildErc20DepositTxs,
   buildNativeTransferTx,
   fetchMayaQuote,
@@ -337,6 +338,7 @@ function readForm() {
  * @returns {Promise<MayaQuote>}
  */
 async function fetchValidatedQuote(form) {
+  await assertRouteTradingOpen(form.sourceAssetKey);
   const quote = await fetchMayaQuote(form);
   if (isBelowRecommendedMinimum(form.amount, quote)) {
     const minimum = formatMayaAmount(quote.recommended_min_amount_in);

@@ -4,14 +4,19 @@ import {
   ETH_ASSET,
   ETH_USDC_ASSET,
   ZEC_ASSET,
+  MAYA_INBOUND_ENDPOINT,
   MAYA_QUOTE_ENDPOINT,
+  TradingHaltedError,
+  assertRouteTradingOpen,
   buildDepositWithExpiryData,
   buildErc20ApproveData,
   decimalToNativeUnits,
   ethToMayaAmount,
   formatMayaAmount,
+  haltedRouteStatuses,
   isLikelyZecAddress,
   isBelowRecommendedMinimum,
+  isTradingHaltError,
   memoToHexData,
   quoteUrl,
   secondsLabel,
@@ -102,4 +107,34 @@ test('detects amounts below Maya recommended minimum', () => {
   assert.equal(isBelowRecommendedMinimum('0.001', quote), true);
   assert.equal(isBelowRecommendedMinimum('0.003', quote), false);
   assert.equal(isBelowRecommendedMinimum('0.01', quote), false);
+});
+
+test('detects Maya inbound route halts before quoting', () => {
+  const statuses = [
+    { chain: 'ETH', halted: true, chain_trading_paused: true },
+    { chain: 'ZEC', halted: true, chain_trading_paused: true },
+    { chain: 'DASH', halted: false, chain_trading_paused: false },
+  ];
+  assert.deepEqual(haltedRouteStatuses(statuses).map((status) => status.chain), ['ETH', 'ZEC']);
+  assert.equal(isTradingHaltError("failed to simulate swap: trading is halted, can't process swap"), true);
+});
+
+test('throws a safe route-halted error from the inbound-address status endpoint', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.equal(String(url), MAYA_INBOUND_ENDPOINT);
+    return {
+      ok: true,
+      json: async () => [
+        { chain: 'ETH', halted: true, chain_trading_paused: true },
+        { chain: 'ZEC', halted: false, chain_trading_paused: false },
+      ],
+    };
+  };
+
+  try {
+    await assert.rejects(() => assertRouteTradingOpen(), TradingHaltedError);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
